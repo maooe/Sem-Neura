@@ -1,0 +1,8 @@
+{
+  "name": "SEM NEURA",
+  "description": "Sistema completo de gestão financeira e agendamento pessoal com inteligência artificial para uma vida sem estresse.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
