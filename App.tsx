@@ -12,7 +12,7 @@ import { ProfileModal } from './components/ProfileModal.tsx';
 import { getFinancialHealthAnalysis } from './services/gemini.ts';
 import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
-import { BrainCircuit, Menu, X, CloudCheck, LayoutDashboard, Calendar, Download, Settings, Share2, Users } from 'lucide-react';
+import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users } from 'lucide-react';
 
 const App: React.FC = () => {
   // Estado de Perfis
@@ -205,7 +205,7 @@ const App: React.FC = () => {
                     </h1>
                     {scriptUrl && (
                       <div className="hidden sm:flex items-center gap-2 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black animate-in slide-in-from-left-4 duration-500">
-                        <CloudCheck size={14} /> NUVEM ATIVA
+                        <Cloud size={14} /> NUVEM ATIVA
                       </div>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, CategoryKind, ExtendedStatus, PaymentMethod } from '../types';
-import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud, CloudCheck } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud } from 'lucide-react';
 
 interface FinanceCardProps {
   title: string;
@@ -125,8 +125,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                       </div>
                       <div className="font-black text-slate-700 flex items-center gap-1.5">
                         R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        {/* Fix: Wrap Lucide icon in a span to provide a title tooltip as Lucide icons don't support the title prop directly in this environment */}
-                        {isSyncActive && <span title="Sincronizado na nuvem"><CloudCheck size={12} className="text-emerald-500 opacity-60" /></span>}
+                        {isSyncActive && <span title="Sincronizado na nuvem"><Cloud size={12} className="text-emerald-500 opacity-60" /></span>}
                       </div>
                     </div>
 
