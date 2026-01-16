@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, CategoryKind, ExtendedStatus, PaymentMethod } from '../types';
-import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, User } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud, CloudCheck } from 'lucide-react';
 
 interface FinanceCardProps {
   title: string;
@@ -9,6 +10,7 @@ interface FinanceCardProps {
   onAdd: (item: Partial<Transaction>) => void;
   onToggleStatus: (id: string) => void;
   onDelete: (id: string) => void;
+  isSyncActive?: boolean;
 }
 
 const statusLabels: Record<ExtendedStatus, string> = {
@@ -33,11 +35,11 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
   items,
   onAdd,
   onToggleStatus,
-  onDelete
+  onDelete,
+  isSyncActive
 }) => {
   const [showAdd, setShowAdd] = useState(false);
   
-  // Form States
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -46,7 +48,6 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PIX');
   const [observation, setObservation] = useState('');
 
-  // Update category selection based on transaction type when modal opens
   useEffect(() => {
     if (showAdd) {
       setCategoryKind(type === TransactionType.PAYABLE ? 'FIXED' : 'RECURRING');
@@ -65,7 +66,6 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
       paymentMethod,
       observation
     });
-    // Reset
     setDescription('');
     setAmount('');
     setDueDate('');
@@ -108,7 +108,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                   >
                     <CheckCircle size={18} />
                   </button>
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className={`font-bold text-slate-800 ${item.status === 'PAID' ? 'line-through opacity-50' : ''}`}>{item.description}</p>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
@@ -123,7 +123,11 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                         <Clock size={12} />
                         {new Date(item.dueDate).toLocaleDateString('pt-BR')}
                       </div>
-                      <div className="font-black text-slate-700">R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                      <div className="font-black text-slate-700 flex items-center gap-1.5">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {/* Fix: Wrap Lucide icon in a span to provide a title tooltip as Lucide icons don't support the title prop directly in this environment */}
+                        {isSyncActive && <span title="Sincronizado na nuvem"><CloudCheck size={12} className="text-emerald-500 opacity-60" /></span>}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 mt-2">
