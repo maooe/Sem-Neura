@@ -1,7 +1,8 @@
 
-import React from 'react';
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check } from 'lucide-react';
+import React, { useRef } from 'react';
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check, FileJson, UploadCloud } from 'lucide-react';
 import { ThemeType } from '../types';
+import { exportFullBackupJSON, importFullBackupJSON } from '../utils/backup';
 
 interface SidebarProps {
   activeView: 'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings';
@@ -34,16 +35,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentTheme,
   onThemeChange
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'annual', label: 'Calendário 2026', icon: Calendar },
+    { id: 'annual', label: 'Calendário Anual', icon: Calendar },
     { id: 'pagar', label: 'Contas a Pagar', icon: CreditCard },
     { id: 'receber', label: 'Contas a Receber', icon: TrendingUp },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ] as const;
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const ok = await importFullBackupJSON(file);
+      if (ok) {
+        alert("Backup restaurado com sucesso! A página será recarregada.");
+        window.location.reload();
+      } else {
+        alert("Erro ao restaurar o backup. Verifique o arquivo.");
+      }
+    }
+  };
+
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden lg:flex flex-col h-screen sticky top-0 overflow-y-auto custom-scrollbar">
+    <aside className="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden lg:flex flex-col h-screen sticky top-0 overflow-y-auto custom-scrollbar border-r border-white/5">
       <div className="p-8 flex items-center gap-3">
         <div className="bg-brand-600 p-2 rounded-xl transition-colors duration-500 shadow-brand">
           <BrainCircuit size={24} className="text-white" />
@@ -112,22 +128,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm text-brand-500 hover:bg-white/5"
         >
           <Share2 size={18} />
-          Compartilhar Link
+          Compartilhar
         </button>
 
+        <div className="grid grid-cols-2 gap-2">
+          <button 
+            onClick={onExport}
+            title="Exportar Transações (CSV)"
+            className="flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-700"
+          >
+            <Download size={14} /> CSV
+          </button>
+          <button 
+            onClick={exportFullBackupJSON}
+            title="Backup Completo (JSON)"
+            className="flex flex-col items-center justify-center gap-1 bg-brand-600/10 hover:bg-brand-600 text-brand-500 hover:text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-brand-500/20"
+          >
+            <FileJson size={14} /> Backup
+          </button>
+        </div>
+
         <button 
-          onClick={onExport}
-          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl transition-all text-sm font-bold border border-slate-700"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white py-3 rounded-xl transition-all text-[10px] font-black uppercase border border-slate-700"
         >
-          <Download size={16} /> Exportar CSV
+          <UploadCloud size={16} /> Restaurar JSON
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImport} 
+            accept=".json" 
+            className="hidden" 
+          />
         </button>
         
         <div className={`p-4 rounded-2xl border transition-colors ${isSyncActive ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
-          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Sincronização</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Cloud Sync</p>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isSyncActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></div>
             <span className={`text-[11px] font-black uppercase ${isSyncActive ? 'text-emerald-400' : 'text-slate-500'}`}>
-              {isSyncActive ? 'BACKUP NA NUVEM OK' : 'LOCAL (SEM NUVEM)'}
+              {isSyncActive ? 'Ativo' : 'Apenas Local'}
             </span>
           </div>
         </div>

@@ -42,6 +42,8 @@ const App: React.FC = () => {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [view, setView] = useState<'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings'>('dashboard');
 
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+
   const STORAGE_KEYS = useMemo(() => ({
     PROFILES_LIST: 'sn_profiles_list_v1',
     CURRENT_PROFILE: 'sn_current_profile_active',
@@ -177,7 +179,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <button onClick={() => exportTransactionsToCSV(transactions)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black text-xs uppercase hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Download size={18} /> Backup CSV</button>
-                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-slate-800 font-black text-xs uppercase hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário 2026</button>
+                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-slate-800 font-black text-xs uppercase hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário {currentYear}</button>
                   </div>
               </div>
               <div className="w-full lg:w-1/3 bg-brand-50 border-2 border-brand-200 rounded-[2rem] p-6 shadow-brand relative overflow-hidden group">
