@@ -6,10 +6,13 @@ import { ReminderSection } from './components/ReminderSection.tsx';
 import { GoogleCalendarIntegration } from './components/GoogleCalendarIntegration.tsx';
 import { AnnualCalendar2026 } from './components/AnnualCalendar2026.tsx';
 import { CategorySpendingChart } from './components/CategorySpendingChart.tsx';
+import { FixedExpensesChart } from './components/FixedExpensesChart.tsx';
 import { SettingsView } from './components/SettingsView.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { ShareModal } from './components/ShareModal.tsx';
 import { ProfileModal } from './components/ProfileModal.tsx';
+import { LoadingScreen } from './components/LoadingScreen.tsx';
+import { HeaderWidgets } from './components/HeaderWidgets.tsx';
 import { getFinancialHealthAnalysis } from './services/gemini.ts';
 import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
@@ -24,6 +27,7 @@ const THEMES: Record<ThemeType, any> = {
 };
 
 const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [profiles, setProfiles] = useState<string[]>(['Padrão']);
   const [currentProfile, setCurrentProfile] = useState<string>('Padrão');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -49,6 +53,12 @@ const App: React.FC = () => {
     LAST_ANALYSIS: `sn_${currentProfile}_last_analysis_date`
   }), [currentProfile]);
 
+  // Splash Screen Timer
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Aplicar cores do tema
   useEffect(() => {
     const colors = THEMES[theme];
@@ -61,7 +71,7 @@ const App: React.FC = () => {
     root.style.setProperty('--brand-shadow', colors.shadow);
   }, [theme]);
 
-  // Carregar dados e disparar análise automática se for um novo dia
+  // Carregar dados e disparar análise automática
   useEffect(() => {
     const savedTrans = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
     const savedRemind = localStorage.getItem(STORAGE_KEYS.REMINDERS);
@@ -79,7 +89,6 @@ const App: React.FC = () => {
     setScriptUrl(savedUrl || '');
     if (savedTheme && THEMES[savedTheme]) setTheme(savedTheme);
 
-    // Lógica de Auto-Análise Diária
     const today = new Date().toISOString().split('T')[0];
     if (lastDate !== today && (transData.length > 0 || remindData.length > 0)) {
       triggerAnalysis();
@@ -102,8 +111,6 @@ const App: React.FC = () => {
     const result = await getFinancialHealthAnalysis(transactions, reminders, !!scriptUrl);
     setAnalysis(result || "Análise concluída.");
     setLoadingAnalysis(false);
-    
-    // Salva a data da última análise
     const today = new Date().toISOString().split('T')[0];
     localStorage.setItem(STORAGE_KEYS.LAST_ANALYSIS, today);
   }, [transactions, reminders, scriptUrl, STORAGE_KEYS]);
@@ -160,17 +167,17 @@ const App: React.FC = () => {
       default:
         return (
           <>
-            <div className="mb-10 flex flex-col lg:flex-row gap-8 items-start">
+            <div className="mb-10 flex flex-col lg:flex-row gap-8 items-start animate-in fade-in slide-in-from-top-6 duration-700">
               <div className="flex-1 w-full">
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tighter uppercase">Janeiro <span className="text-brand-600">2026</span></h1>
-                    <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-[11px] font-black border border-emerald-200 shadow-sm animate-pulse">
-                      <CheckCircle size={14} /> SALVAMENTO ATIVO
+                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tighter uppercase">Painel <span className="text-brand-600">Central</span></h1>
+                    <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-[11px] font-black border border-emerald-200 shadow-sm">
+                      <CheckCircle size={14} /> SEM NEURA OK
                     </div>
                   </div>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <button onClick={() => exportTransactionsToCSV(transactions)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black text-xs uppercase hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Download size={18} /> Backup CSV</button>
-                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-slate-800 font-black text-xs uppercase hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário Anual</button>
+                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-slate-800 font-black text-xs uppercase hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário 2026</button>
                   </div>
               </div>
               <div className="w-full lg:w-1/3 bg-brand-50 border-2 border-brand-200 rounded-[2rem] p-6 shadow-brand relative overflow-hidden group">
@@ -178,20 +185,20 @@ const App: React.FC = () => {
                     <div className={`p-2 bg-brand-600 text-white rounded-lg ${loadingAnalysis ? 'animate-pulse' : ''}`}><BrainCircuit size={20} /></div>
                     <div className="flex flex-col">
                       <h4 className="font-black text-brand-900 uppercase text-xs tracking-widest leading-none">IA Conselheira</h4>
-                      <span className="text-[10px] font-black text-brand-600 uppercase tracking-tighter mt-1">Status: {loadingAnalysis ? 'Analisando...' : 'Análise do Dia'}</span>
+                      <span className="text-[10px] font-black text-brand-600 uppercase tracking-tighter mt-1">{loadingAnalysis ? 'Analisando...' : 'Análise do Dia'}</span>
                     </div>
                     <button 
                       onClick={triggerAnalysis} 
                       className="ml-auto text-[11px] font-black text-white bg-brand-600 px-4 py-2 rounded-full hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all shadow-md border border-brand-500/30"
                     >
-                      {loadingAnalysis ? '...' : 'REANALISAR'}
+                      REANALISAR
                     </button>
                   </div>
                   <div className="bg-white/40 p-4 rounded-xl border border-white/60 min-h-[80px]">
                     <p className="text-sm text-slate-900 font-bold leading-relaxed italic relative z-10">"{analysis}"</p>
                   </div>
-                  <div className="mt-3 text-[9px] font-black text-brand-400 uppercase tracking-widest text-right">
-                    Auto-save ativado em {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  <div className="mt-3 text-[9px] font-black text-brand-400 uppercase tracking-widest text-right italic">
+                    Último salvamento: {new Date().toLocaleTimeString('pt-BR')}
                   </div>
               </div>
             </div>
@@ -202,6 +209,8 @@ const App: React.FC = () => {
                   <FinanceCard title="CONTAS A PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
                   <FinanceCard title="CONTAS A RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
                 </div>
+                {/* Novo Gráfico Horizontal de Despesas Fixas */}
+                <FixedExpensesChart transactions={transactions} />
                 <GoogleCalendarIntegration transactions={transactions} birthdays={birthdays} onAddBirthday={handleAddBirthday} onDeleteBirthday={handleDeleteBirthday} />
               </div>
               <div className="space-y-8 flex flex-col">
@@ -215,17 +224,27 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar activeView={view} onViewChange={setView} onExport={() => exportTransactionsToCSV(transactions)} onShare={() => setIsShareModalOpen(true)} onOpenProfiles={() => setIsProfileModalOpen(true)} isSyncActive={!!scriptUrl} currentProfile={currentProfile} currentTheme={theme} onThemeChange={setTheme} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 lg:hidden">
-          <div className="px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2" onClick={() => setView('dashboard')}><BrainCircuit className="text-brand-600" size={24} /><span className="text-xl font-black tracking-tighter uppercase">Sem Neura</span></div>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {isLoading && <LoadingScreen />}
+      
+      {!isLoading && (
+        <>
+          <HeaderWidgets />
+          <div className="flex-1 flex">
+            <Sidebar activeView={view} onViewChange={setView} onExport={() => exportTransactionsToCSV(transactions)} onShare={() => setIsShareModalOpen(true)} onOpenProfiles={() => setIsProfileModalOpen(true)} isSyncActive={!!scriptUrl} currentProfile={currentProfile} currentTheme={theme} onThemeChange={setTheme} />
+            <div className="flex-1 flex flex-col min-w-0">
+              <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 lg:hidden">
+                <div className="px-4 h-16 flex items-center justify-between">
+                  <div className="flex items-center gap-2" onClick={() => setView('dashboard')}><BrainCircuit className="text-brand-600" size={24} /><span className="text-xl font-black tracking-tighter uppercase">Sem Neura</span></div>
+                  <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
+                </div>
+              </nav>
+              <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto">{renderMainContent()}</main>
+            </div>
           </div>
-        </nav>
-        <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto">{renderMainContent()}</main>
-      </div>
+        </>
+      )}
+
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} transactions={transactions} isSyncActive={!!scriptUrl} />
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} profiles={profiles} currentProfile={currentProfile} onSelectProfile={setCurrentProfile} onCreateProfile={(name) => { setProfiles([...profiles, name]); setCurrentProfile(name); setIsProfileModalOpen(false); }} onDeleteProfile={(name) => { setProfiles(profiles.filter(p => p !== name)); if(currentProfile === name) setCurrentProfile('Padrão'); }} />
     </div>
