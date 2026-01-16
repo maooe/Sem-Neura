@@ -6,9 +6,9 @@ export enum TransactionType {
 
 export type CategoryKind = 'FIXED' | 'VARIABLE' | 'RECURRING';
 
-export type ExtendedStatus = 'PAID' | 'OPEN' | 'SCHEDULED' | 'OVERDUE' | 'CANCELLED' | 'OTHER';
+export type ExtendedStatus = 'PAID' | 'OPEN' | 'SCHEDULED' | 'OVERDUE' | 'CANCELLED' | 'FROZEN' | 'OTHER';
 
-export type PaymentMethod = 'PIX' | 'CASH' | 'CARD' | 'OTHER';
+export type PaymentMethod = 'PIX' | 'BOLETO' | 'CARD' | 'CASH' | 'OTHER';
 
 export type ThemeType = 'classic' | 'emerald' | 'sunset' | 'purple' | 'midnight';
 

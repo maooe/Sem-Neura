@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, CategoryKind, ExtendedStatus, PaymentMethod } from '../types';
-import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud, Check } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud, Check, ShieldAlert, Snowflake, XCircle, Barcode } from 'lucide-react';
 
 interface FinanceCardProps {
   title: string;
@@ -14,19 +14,39 @@ interface FinanceCardProps {
 }
 
 const statusLabels: Record<ExtendedStatus, string> = {
-  PAID: 'Paga',
-  OPEN: 'Em aberto',
+  PAID: 'Pago',
+  OPEN: 'Em dia',
   SCHEDULED: 'Agendado',
-  OVERDUE: 'Atrasado',
+  OVERDUE: 'Em atraso',
   CANCELLED: 'Cancelado',
+  FROZEN: 'Congelado',
   OTHER: 'Outro'
+};
+
+const statusColors: Record<ExtendedStatus, string> = {
+  PAID: 'bg-green-50 text-green-700 border-green-200',
+  OPEN: 'bg-blue-50 text-blue-700 border-blue-200',
+  SCHEDULED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  OVERDUE: 'bg-red-50 text-red-700 border-red-200',
+  CANCELLED: 'bg-slate-100 text-slate-500 border-slate-200',
+  FROZEN: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  OTHER: 'bg-slate-50 text-slate-600 border-slate-200'
 };
 
 const methodIcons: Record<PaymentMethod, React.ReactNode> = {
   PIX: <QrCode size={14} />,
+  BOLETO: <Barcode size={14} />,
   CASH: <Banknote size={14} />,
   CARD: <CreditCard size={14} />,
   OTHER: <MoreHorizontal size={14} />
+};
+
+const methodLabels: Record<PaymentMethod, string> = {
+  PIX: 'PIX',
+  BOLETO: 'Boleto',
+  CASH: 'Dinheiro',
+  CARD: 'Cartão',
+  OTHER: 'Outros'
 };
 
 export const FinanceCard: React.FC<FinanceCardProps> = ({
@@ -52,6 +72,8 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
   useEffect(() => {
     if (showAdd) {
       setCategoryKind(type === TransactionType.PAYABLE ? 'FIXED' : 'RECURRING');
+      setStatus('OPEN');
+      setPaymentMethod('PIX');
     }
   }, [showAdd, type]);
 
@@ -83,7 +105,6 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
 
   const total = items.reduce((acc, curr) => acc + curr.amount, 0);
   const isPayable = type === TransactionType.PAYABLE;
-  const categories: CategoryKind[] = isPayable ? ['FIXED', 'VARIABLE'] : ['RECURRING', 'VARIABLE'];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
@@ -112,6 +133,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                 <div className="flex gap-3">
                   <button 
                     onClick={() => onToggleStatus(item.id)}
+                    title={item.status === 'PAID' ? 'Marcar como em aberto' : 'Marcar como pago'}
                     className={`mt-1 p-2 rounded-full transition-colors ${item.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-400 hover:bg-slate-300'}`}
                   >
                     <CheckCircle size={18} />
@@ -138,15 +160,14 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                     </div>
 
                     <div className="flex items-center gap-3 mt-2">
-                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                         item.status === 'PAID' ? 'bg-green-50 text-green-700 border-green-200' : 
-                         item.status === 'OVERDUE' ? 'bg-red-50 text-red-700 border-red-200' :
-                         'bg-amber-50 text-amber-700 border-amber-200'
-                       }`}>
+                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusColors[item.status]}`}>
+                         {item.status === 'FROZEN' && <Snowflake size={10} />}
+                         {item.status === 'CANCELLED' && <XCircle size={10} />}
+                         {item.status === 'OVERDUE' && <ShieldAlert size={10} />}
                          {statusLabels[item.status]}
                        </span>
                        <span className="flex items-center gap-1 text-[10px] font-medium text-slate-500">
-                          {methodIcons[item.paymentMethod]} {item.paymentMethod}
+                          {methodIcons[item.paymentMethod]} {methodLabels[item.paymentMethod]}
                        </span>
                     </div>
                   </div>
@@ -177,36 +198,58 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
-                Tipo
-              </label>
-              <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-                {categories.map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setCategoryKind(k)}
-                    className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all duration-300 ${categoryKind === k ? 'bg-brand-600 text-white shadow-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}
-                  >
-                    {k === 'FIXED' ? 'FIXO' : k === 'RECURRING' ? 'RECORRENTE' : 'VARIÁVEL'}
-                  </button>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Categoria</label>
+                <select 
+                  value={categoryKind}
+                  onChange={(e) => setCategoryKind(e.target.value as CategoryKind)}
+                  className="w-full p-4 bg-slate-50 border-slate-200 border-2 rounded-2xl text-sm font-bold focus:border-brand-500 outline-none"
+                >
+                  {isPayable ? (
+                    <>
+                      <option value="FIXED">FIXO</option>
+                      <option value="VARIABLE">VARIÁVEL</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="RECURRING">RECORRENTE</option>
+                      <option value="VARIABLE">VARIÁVEL</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Status Inicial</label>
+                <select 
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as ExtendedStatus)}
+                  className="w-full p-4 bg-slate-50 border-slate-200 border-2 rounded-2xl text-sm font-bold focus:border-brand-500 outline-none"
+                >
+                  <option value="OPEN">EM DIA</option>
+                  <option value="PAID">PAGO</option>
+                  <option value="SCHEDULED">AGENDADO</option>
+                  <option value="OVERDUE">EM ATRASO</option>
+                  <option value="FROZEN">CONGELADO</option>
+                  <option value="CANCELLED">CANCELADO</option>
+                </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Valor</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">R$</span>
-                  <input 
-                    type="number" 
-                    placeholder="0,00" 
-                    className="w-full pl-11 p-4 bg-slate-50 text-slate-900 border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none font-black"
-                    value={amount} onChange={(e) => setAmount(e.target.value)}
-                  />
-                </div>
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Forma de Pagamento</label>
+                <select 
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="w-full p-4 bg-slate-50 border-slate-200 border-2 rounded-2xl text-sm font-bold focus:border-brand-500 outline-none"
+                >
+                  <option value="PIX">PIX</option>
+                  <option value="BOLETO">BOLETO</option>
+                  <option value="CARD">CARTÃO</option>
+                  <option value="CASH">DINHEIRO</option>
+                  <option value="OTHER">OUTROS</option>
+                </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Data</label>
@@ -214,6 +257,19 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                   type="date" 
                   className="w-full p-4 bg-slate-50 border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-900 font-bold"
                   value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Valor</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">R$</span>
+                <input 
+                  type="number" 
+                  placeholder="0,00" 
+                  className="w-full pl-11 p-4 bg-slate-50 text-slate-900 border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none font-black"
+                  value={amount} onChange={(e) => setAmount(e.target.value)}
                 />
               </div>
             </div>
