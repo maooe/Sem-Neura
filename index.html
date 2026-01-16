@@ -13,6 +13,27 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+        #root:empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #0f172a;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            letter-spacing: 0.1em;
+        }
+        #root:empty::after {
+            content: "CARREGANDO SEM NEURA...";
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
     </style>
 <script type="importmap">
@@ -29,5 +50,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- Script de entrada vital para o funcionamento do app -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
