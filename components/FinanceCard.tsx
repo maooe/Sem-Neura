@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, CategoryKind, ExtendedStatus, PaymentMethod } from '../types';
-import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Clock, Info, CreditCard, Banknote, QrCode, MoreHorizontal, Cloud, Check } from 'lucide-react';
 
 interface FinanceCardProps {
   title: string;
@@ -39,6 +39,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
   isSyncActive
 }) => {
   const [showAdd, setShowAdd] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -56,6 +57,9 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
 
   const handleAdd = () => {
     if (!description || !amount || !dueDate) return;
+    
+    setIsSaved(true);
+    
     onAdd({
       description,
       amount: parseFloat(amount),
@@ -66,11 +70,15 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
       paymentMethod,
       observation
     });
-    setDescription('');
-    setAmount('');
-    setDueDate('');
-    setObservation('');
-    setShowAdd(false);
+
+    setTimeout(() => {
+      setDescription('');
+      setAmount('');
+      setDueDate('');
+      setObservation('');
+      setIsSaved(false);
+      setShowAdd(false);
+    }, 800);
   };
 
   const total = items.reduce((acc, curr) => acc + curr.amount, 0);
@@ -112,7 +120,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className={`font-bold text-slate-800 ${item.status === 'PAID' ? 'line-through opacity-50' : ''}`}>{item.description}</p>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                        item.categoryKind === 'VARIABLE' ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'
+                        item.categoryKind === 'VARIABLE' ? 'bg-amber-100 text-amber-600' : 'bg-brand-100 text-brand-600'
                       }`}>
                         {item.categoryKind === 'FIXED' ? 'Fixo' : item.categoryKind === 'RECURRING' ? 'Recorrente' : 'Variável'}
                       </span>
@@ -152,9 +160,9 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
         </div>
 
         {showAdd && (
-          <div className="mt-4 mb-6 p-6 border-2 border-blue-100 rounded-[2.5rem] space-y-5 bg-white animate-in fade-in zoom-in-95">
-            <h4 className="font-black text-blue-900 text-[11px] uppercase tracking-[0.15em] flex items-center gap-2 mb-2">
-              <Plus size={16} className="text-blue-600" /> Novo Lançamento
+          <div className="mt-4 mb-6 p-6 border-2 border-brand-100 rounded-[2.5rem] space-y-5 bg-white animate-in fade-in zoom-in-95">
+            <h4 className="font-black text-brand-900 text-[11px] uppercase tracking-[0.15em] flex items-center gap-2 mb-2">
+              <Plus size={16} className="text-brand-600" /> Novo Lançamento
             </h4>
             
             <div className="space-y-1.5">
@@ -164,7 +172,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
               <input 
                 type="text" 
                 placeholder={isPayable ? "Ex: Aluguel, Luz, Internet" : "Nome do Cliente"} 
-                className="w-full p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm focus:ring-0 focus:border-blue-500 outline-none shadow-inner placeholder:text-slate-500 transition-all font-medium"
+                className="w-full p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none shadow-inner placeholder:text-slate-500 transition-all font-medium"
                 value={description} onChange={(e) => setDescription(e.target.value)}
               />
             </div>
@@ -179,7 +187,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                     key={k}
                     type="button"
                     onClick={() => setCategoryKind(k)}
-                    className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all duration-300 ${categoryKind === k ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 ring-2 ring-blue-600 ring-offset-1' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                    className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all duration-300 ${categoryKind === k ? 'bg-brand-600 text-white shadow-brand ring-2 ring-brand-600 ring-offset-1' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
                   >
                     {k === 'FIXED' ? 'CUSTO FIXO' : k === 'RECURRING' ? 'RECORRENTE' : 'VARIÁVEL'}
                   </button>
@@ -195,7 +203,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                   <input 
                     type="number" 
                     placeholder="0,00" 
-                    className="w-full pl-11 p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm focus:ring-0 focus:border-blue-500 outline-none shadow-inner placeholder:text-slate-500 font-bold"
+                    className="w-full pl-11 p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none shadow-inner placeholder:text-slate-500 font-bold"
                     value={amount} onChange={(e) => setAmount(e.target.value)}
                   />
                 </div>
@@ -204,7 +212,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Vencimento</label>
                 <input 
                   type="date" 
-                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-blue-500 outline-none text-slate-600 font-medium"
+                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-600 font-medium"
                   value={dueDate} onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
@@ -214,7 +222,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Status</label>
                 <select 
-                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-blue-500 outline-none text-slate-600 font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-600 font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
                   value={status} onChange={(e) => setStatus(e.target.value as ExtendedStatus)}
                 >
                   {Object.entries(statusLabels).map(([val, label]) => (
@@ -225,7 +233,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Meio</label>
                 <select 
-                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-blue-500 outline-none text-slate-600 font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-600 font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
                   value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                 >
                   <option value="PIX">PIX</option>
@@ -240,14 +248,36 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Observação</label>
               <textarea 
                 placeholder="Detalhes adicionais..." 
-                className="w-full p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm h-24 resize-none focus:ring-0 focus:border-blue-500 outline-none shadow-inner placeholder:text-slate-500 font-medium"
+                className="w-full p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm h-24 resize-none focus:ring-0 focus:border-brand-500 outline-none shadow-inner placeholder:text-slate-500 font-medium"
                 value={observation} onChange={(e) => setObservation(e.target.value)}
               />
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={handleAdd} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl text-sm font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95">SALVAR</button>
-              <button onClick={() => setShowAdd(false)} className="flex-1 bg-slate-50 text-slate-400 py-4 rounded-2xl text-sm font-bold border border-slate-200 hover:bg-slate-100 transition-all">CANCELAR</button>
+              <button 
+                onClick={handleAdd} 
+                disabled={isSaved}
+                className={`flex-1 py-4 rounded-2xl text-sm font-black shadow-brand transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                  isSaved 
+                  ? 'bg-emerald-500 text-white shadow-emerald-200' 
+                  : 'bg-brand-600 text-white shadow-brand hover:bg-brand-500'
+                }`}
+              >
+                {isSaved ? (
+                  <>
+                    <Check size={18} className="animate-in zoom-in duration-300" />
+                    SALVO!
+                  </>
+                ) : (
+                  'SALVAR'
+                )}
+              </button>
+              <button 
+                onClick={() => setShowAdd(false)} 
+                className="flex-1 bg-slate-50 text-slate-400 py-4 rounded-2xl text-sm font-bold border border-slate-200 hover:bg-slate-100 transition-all"
+              >
+                CANCELAR
+              </button>
             </div>
           </div>
         )}

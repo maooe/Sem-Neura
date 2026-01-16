@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check } from 'lucide-react';
+import { ThemeType } from '../types';
 
 interface SidebarProps {
   activeView: 'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings';
@@ -10,7 +11,17 @@ interface SidebarProps {
   onOpenProfiles: () => void;
   isSyncActive: boolean;
   currentProfile: string;
+  currentTheme: ThemeType;
+  onThemeChange: (theme: ThemeType) => void;
 }
+
+const THEME_OPTIONS: { id: ThemeType; color: string; label: string }[] = [
+  { id: 'classic', color: 'bg-blue-600', label: 'Classic' },
+  { id: 'emerald', color: 'bg-emerald-600', label: 'Emerald' },
+  { id: 'sunset', color: 'bg-rose-600', label: 'Sunset' },
+  { id: 'purple', color: 'bg-violet-600', label: 'Purple' },
+  { id: 'midnight', color: 'bg-slate-700', label: 'Midnight' },
+];
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeView, 
@@ -19,7 +30,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShare, 
   onOpenProfiles,
   isSyncActive, 
-  currentProfile 
+  currentProfile,
+  currentTheme,
+  onThemeChange
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -30,9 +43,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ] as const;
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden lg:flex flex-col h-screen sticky top-0">
+    <aside className="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden lg:flex flex-col h-screen sticky top-0 overflow-y-auto custom-scrollbar">
       <div className="p-8 flex items-center gap-3">
-        <div className="bg-blue-600 p-2 rounded-xl">
+        <div className="bg-brand-600 p-2 rounded-xl transition-colors duration-500 shadow-brand">
           <BrainCircuit size={24} className="text-white" />
         </div>
         <span className="text-xl font-black text-white tracking-tighter uppercase">Sem Neura</span>
@@ -45,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-black text-xs uppercase">
+            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-black text-xs uppercase shadow-brand transition-colors duration-500">
               {currentProfile.charAt(0)}
             </div>
             <div className="text-left overflow-hidden">
@@ -65,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => onViewChange(item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
               activeView === item.id 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
+                ? 'bg-brand-600 text-white shadow-brand' 
                 : 'hover:bg-slate-800 hover:text-white'
             }`}
           >
@@ -74,16 +87,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         ))}
         
-        <button
+        <div className="pt-6 px-4">
+           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+             <Palette size={12} /> Aparência
+           </p>
+           <div className="flex flex-wrap gap-2">
+              {THEME_OPTIONS.map(theme => (
+                <button
+                  key={theme.id}
+                  onClick={() => onThemeChange(theme.id)}
+                  title={theme.label}
+                  className={`w-8 h-8 rounded-full ${theme.color} border-2 transition-all flex items-center justify-center relative active:scale-90 ${currentTheme === theme.id ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                >
+                  {currentTheme === theme.id && <Check size={14} className="text-white" />}
+                </button>
+              ))}
+           </div>
+        </div>
+      </nav>
+
+      <div className="p-4 mt-auto space-y-3">
+        <button 
           onClick={onShare}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm text-blue-400 hover:bg-blue-500/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm text-brand-500 hover:bg-white/5"
         >
           <Share2 size={18} />
           Compartilhar Link
         </button>
-      </nav>
 
-      <div className="p-4 space-y-3">
         <button 
           onClick={onExport}
           className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl transition-all text-sm font-bold border border-slate-700"

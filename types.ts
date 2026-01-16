@@ -10,6 +10,17 @@ export type ExtendedStatus = 'PAID' | 'OPEN' | 'SCHEDULED' | 'OVERDUE' | 'CANCEL
 
 export type PaymentMethod = 'PIX' | 'CASH' | 'CARD' | 'OTHER';
 
+export type ThemeType = 'classic' | 'emerald' | 'sunset' | 'purple' | 'midnight';
+
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  light: string;
+  accent: string;
+  dark: string;
+  shadow: string;
+}
+
 export interface Transaction {
   id: string;
   description: string;
@@ -28,6 +39,12 @@ export interface Reminder {
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   completed: boolean;
   createdAt: string;
+}
+
+export interface Birthday {
+  id: string;
+  name: string;
+  date: string; // Formato YYYY-MM-DD
 }
 
 export interface CalendarEvent {

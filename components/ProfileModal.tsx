@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { X, UserPlus, Users, Check, Trash2, UserCircle } from 'lucide-react';
+import { X, UserPlus, Users, Check, Trash2 } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -78,9 +77,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       <Check size={14} />
                     </div>
                   ) : (
-                    profiles.length > 1 && (
+                    profiles.length > 1 && profile !== 'Padrão' && (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); onDeleteProfile(profile); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteProfile(profile);
+                        }}
                         className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 size={16} />
@@ -92,27 +94,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             ))}
           </div>
 
-          <form onSubmit={handleCreate} className="space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Criar Novo Perfil</p>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Criar Novo Perfil</p>
             <div className="flex gap-2">
               <input 
                 type="text" 
-                placeholder="Ex: Empresa, Pessoal, João..."
-                className="flex-1 p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold focus:border-blue-500 outline-none transition-all"
                 value={newProfileName}
                 onChange={(e) => setNewProfileName(e.target.value)}
+                placeholder="Nome do Perfil"
+                className="flex-1 p-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-black text-slate-950 focus:border-blue-600 outline-none transition-all placeholder:text-slate-400 shadow-sm"
               />
               <button 
                 type="submit"
-                className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95"
+                className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95 flex items-center justify-center"
               >
                 <UserPlus size={20} />
               </button>
             </div>
-            <p className="text-[10px] text-slate-400 italic text-center mt-4">
-              Cada perfil tem seus próprios lançamentos, lembretes e configurações de nuvem.
-            </p>
           </form>
+          
+          <p className="mt-6 text-[10px] text-center text-slate-400 font-medium leading-relaxed">
+            Cada perfil tem seus próprios lançamentos, lembretes e configurações de nuvem.
+          </p>
         </div>
       </div>
     </div>

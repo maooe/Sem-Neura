@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Transaction, TransactionType, Reminder, ExtendedStatus } from './types.ts';
+import { Transaction, TransactionType, Reminder, ExtendedStatus, ThemeType, Birthday } from './types.ts';
 import { FinanceCard } from './components/FinanceCard.tsx';
 import { ReminderSection } from './components/ReminderSection.tsx';
 import { GoogleCalendarIntegration } from './components/GoogleCalendarIntegration.tsx';
 import { AnnualCalendar2026 } from './components/AnnualCalendar2026.tsx';
+import { CategorySpendingChart } from './components/CategorySpendingChart.tsx';
 import { SettingsView } from './components/SettingsView.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { ShareModal } from './components/ShareModal.tsx';
@@ -12,7 +13,15 @@ import { ProfileModal } from './components/ProfileModal.tsx';
 import { getFinancialHealthAnalysis } from './services/gemini.ts';
 import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
-import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users } from 'lucide-react';
+import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users, Palette } from 'lucide-react';
+
+const THEMES: Record<ThemeType, any> = {
+  classic: { 600: '#2563eb', 500: '#3b82f6', 100: '#dbeafe', 50: '#eff6ff', 900: '#1e3a8a', shadow: 'rgba(37, 99, 235, 0.15)' },
+  emerald: { 600: '#059669', 500: '#10b981', 100: '#d1fae5', 50: '#ecfdf5', 900: '#064e3b', shadow: 'rgba(5, 150, 105, 0.15)' },
+  sunset: { 600: '#e11d48', 500: '#f43f5e', 100: '#ffe4e6', 50: '#fff1f2', 900: '#881337', shadow: 'rgba(225, 29, 72, 0.15)' },
+  purple: { 600: '#7c3aed', 500: '#8b5cf6', 100: '#ede9fe', 50: '#f5f3ff', 900: '#4c1d95', shadow: 'rgba(124, 58, 237, 0.15)' },
+  midnight: { 600: '#334155', 500: '#475569', 100: '#f1f5f9', 50: '#f8fafc', 900: '#0f172a', shadow: 'rgba(51, 65, 85, 0.15)' }
+};
 
 const App: React.FC = () => {
   // Estado de Perfis
@@ -20,9 +29,13 @@ const App: React.FC = () => {
   const [currentProfile, setCurrentProfile] = useState<string>('Padrão');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // Tema Atual
+  const [theme, setTheme] = useState<ThemeType>('classic');
+
   // Dados do Perfil Atual
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [scriptUrl, setScriptUrl] = useState<string>('');
   
   // UI States
@@ -38,58 +51,63 @@ const App: React.FC = () => {
     CURRENT_PROFILE: 'sn_current_profile_active',
     TRANSACTIONS: `sn_${currentProfile}_transactions_v3`,
     REMINDERS: `sn_${currentProfile}_reminders_v3`,
-    SCRIPT_URL: `sn_${currentProfile}_script_url`
+    BIRTHDAYS: `sn_${currentProfile}_birthdays_v1`,
+    SCRIPT_URL: `sn_${currentProfile}_script_url`,
+    THEME: `sn_${currentProfile}_theme`
   }), [currentProfile]);
 
-  // Carregar Lista de Perfis e Perfil Atual ao Iniciar
+  // Aplicar cores do tema ao :root
+  useEffect(() => {
+    const colors = THEMES[theme];
+    const root = document.documentElement;
+    root.style.setProperty('--brand-600', colors[600]);
+    root.style.setProperty('--brand-500', colors[500]);
+    root.style.setProperty('--brand-100', colors[100]);
+    root.style.setProperty('--brand-50', colors[50]);
+    root.style.setProperty('--brand-900', colors[900]);
+    root.style.setProperty('--brand-shadow', colors.shadow);
+  }, [theme]);
+
+  // Carregar Dados
   useEffect(() => {
     const savedProfiles = localStorage.getItem(STORAGE_KEYS.PROFILES_LIST);
     const savedActive = localStorage.getItem(STORAGE_KEYS.CURRENT_PROFILE);
-    
-    if (savedProfiles) {
-      setProfiles(JSON.parse(savedProfiles));
-    }
-    if (savedActive) {
-      setCurrentProfile(savedActive);
-    }
+    if (savedProfiles) setProfiles(JSON.parse(savedProfiles));
+    if (savedActive) setCurrentProfile(savedActive);
   }, []);
 
-  // Carregar Dados do Perfil Sempre que trocar o currentProfile
   useEffect(() => {
     const savedTrans = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
     const savedRemind = localStorage.getItem(STORAGE_KEYS.REMINDERS);
+    const savedBirth = localStorage.getItem(STORAGE_KEYS.BIRTHDAYS);
     const savedUrl = localStorage.getItem(STORAGE_KEYS.SCRIPT_URL);
+    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) as ThemeType;
     
     setTransactions(savedTrans ? JSON.parse(savedTrans) : []);
     setReminders(savedRemind ? JSON.parse(savedRemind) : []);
+    setBirthdays(savedBirth ? JSON.parse(savedBirth) : []);
     setScriptUrl(savedUrl || '');
-    setAnalysis(`Você trocou para o perfil ${currentProfile}. Como posso ajudar hoje?`);
+    if (savedTheme && THEMES[savedTheme]) setTheme(savedTheme);
   }, [currentProfile, STORAGE_KEYS]);
 
-  // Salvar Dados do Perfil Sempre que houver mudanças
+  // Salvar Dados
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
     localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
+    localStorage.setItem(STORAGE_KEYS.BIRTHDAYS, JSON.stringify(birthdays));
     localStorage.setItem(STORAGE_KEYS.SCRIPT_URL, scriptUrl);
     localStorage.setItem(STORAGE_KEYS.CURRENT_PROFILE, currentProfile);
     localStorage.setItem(STORAGE_KEYS.PROFILES_LIST, JSON.stringify(profiles));
-  }, [transactions, reminders, scriptUrl, currentProfile, profiles, STORAGE_KEYS]);
+    localStorage.setItem(STORAGE_KEYS.THEME, theme);
+  }, [transactions, reminders, birthdays, scriptUrl, currentProfile, profiles, theme, STORAGE_KEYS]);
 
-  const handleCreateProfile = (name: string) => {
-    if (profiles.includes(name)) return;
-    const newList = [...profiles, name];
-    setProfiles(newList);
-    setCurrentProfile(name);
-    setIsProfileModalOpen(false);
+  const handleAddBirthday = (name: string, date: string) => {
+    const newBirth: Birthday = { id: Math.random().toString(36).substr(2, 9), name, date };
+    setBirthdays(prev => [...prev, newBirth]);
   };
 
-  const handleDeleteProfile = (name: string) => {
-    if (name === 'Padrão' || profiles.length === 1) return;
-    const newList = profiles.filter(p => p !== name);
-    setProfiles(newList);
-    if (currentProfile === name) {
-      setCurrentProfile('Padrão');
-    }
+  const handleDeleteBirthday = (id: string) => {
+    setBirthdays(prev => prev.filter(b => b.id !== id));
   };
 
   const handleAddTransaction = async (item: Partial<Transaction>) => {
@@ -104,179 +122,78 @@ const App: React.FC = () => {
       paymentMethod: item.paymentMethod || 'PIX',
       observation: item.observation,
     };
-    
     setTransactions(prev => [...prev, newTrans]);
-
-    if (scriptUrl) {
-      await syncTransactionWithSheets(scriptUrl, newTrans);
-    }
+    if (scriptUrl) await syncTransactionWithSheets(scriptUrl, newTrans);
   };
 
   const handleToggleTransStatus = (id: string) => {
-    setTransactions(prev => prev.map(t => {
-      if (t.id === id) {
-        const nextStatus: ExtendedStatus = t.status === 'PAID' ? 'OPEN' : 'PAID';
-        return { ...t, status: nextStatus };
-      }
-      return t;
-    }));
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: t.status === 'PAID' ? 'OPEN' : 'PAID' } : t));
   };
 
-  const handleDeleteTrans = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  };
+  const handleDeleteTrans = (id: string) => setTransactions(prev => prev.filter(t => t.id !== id));
 
   const handleAddReminder = (text: string, priority: Reminder['priority']) => {
-    const newRem: Reminder = {
-      id: Math.random().toString(36).substr(2, 9),
-      text,
-      priority,
-      completed: false,
-      createdAt: new Date().toISOString(),
-    };
+    const newRem: Reminder = { id: Math.random().toString(36).substr(2, 9), text, priority, completed: false, createdAt: new Date().toISOString() };
     setReminders(prev => [...prev, newRem]);
   };
 
-  const handleToggleReminder = (id: string) => {
-    setReminders(prev => prev.map(r => r.id === id ? { ...r, completed: !r.completed } : r));
-  };
-
-  const handleDeleteReminder = (id: string) => {
-    setReminders(prev => prev.filter(r => r.id !== id));
-  };
+  const handleToggleReminder = (id: string) => setReminders(prev => prev.map(r => r.id === id ? { ...r, completed: !r.completed } : r));
+  const handleDeleteReminder = (id: string) => setReminders(prev => prev.filter(r => r.id !== id));
 
   const triggerAnalysis = useCallback(async () => {
-    if (transactions.length === 0 && reminders.length === 0) {
-      setAnalysis("Adicione lançamentos para que eu possa analisar seus dados!");
-      return;
-    }
     setLoadingAnalysis(true);
     const result = await getFinancialHealthAnalysis(transactions, reminders, !!scriptUrl);
-    setAnalysis(result || "Análise concluída com sucesso.");
+    setAnalysis(result || "Análise concluída.");
     setLoadingAnalysis(false);
   }, [transactions, reminders, scriptUrl]);
-
-  const handleExport = () => {
-    exportTransactionsToCSV(transactions);
-  };
 
   const renderMainContent = () => {
     switch (view) {
       case 'settings':
-        return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} onNavigateToDashboard={() => setView('dashboard')} />;
+        return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} currentTheme={theme} onThemeChange={setTheme} onNavigateToDashboard={() => setView('dashboard')} />;
       case 'annual':
         return <AnnualCalendar2026 />;
-      case 'pagar':
-        return (
-          <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4">
-             <FinanceCard 
-                title="CONTAS A PAGAR"
-                type={TransactionType.PAYABLE}
-                items={transactions.filter(t => t.type === TransactionType.PAYABLE)}
-                onAdd={handleAddTransaction}
-                onToggleStatus={handleToggleTransStatus}
-                onDelete={handleDeleteTrans}
-                isSyncActive={!!scriptUrl}
-              />
-          </div>
-        );
-      case 'receber':
-        return (
-          <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4">
-             <FinanceCard 
-                title="CONTAS A RECEBER"
-                type={TransactionType.RECEIVABLE}
-                items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)}
-                onAdd={handleAddTransaction}
-                onToggleStatus={handleToggleTransStatus}
-                onDelete={handleDeleteTrans}
-                isSyncActive={!!scriptUrl}
-              />
-          </div>
-        );
       default:
         return (
           <>
             <div className="mb-10 flex flex-col lg:flex-row gap-8 items-start">
               <div className="flex-1 w-full">
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tighter uppercase">
-                      Janeiro <span className="text-blue-600">2026</span>
-                    </h1>
-                    {scriptUrl && (
-                      <div className="hidden sm:flex items-center gap-2 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black animate-in slide-in-from-left-4 duration-500">
-                        <Cloud size={14} /> NUVEM ATIVA
-                      </div>
-                    )}
+                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tighter uppercase">Janeiro <span className="text-brand-600">2026</span></h1>
+                    {scriptUrl && <div className="hidden sm:flex items-center gap-2 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black animate-in slide-in-from-left-4 duration-500"><Cloud size={14} /> NUVEM ATIVA</div>}
                   </div>
-                  
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <button 
-                      onClick={handleExport}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg active:scale-95"
-                    >
-                      <Download size={18} /> Backup CSV
-                    </button>
-                    <button 
-                      onClick={() => setView('annual')}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:border-blue-300 hover:bg-blue-50 transition-all shadow-sm"
-                    >
-                      <Calendar size={18} className="text-blue-500" /> Calendário Anual
-                    </button>
-                    <button 
-                      onClick={() => setIsShareModalOpen(true)}
-                      className="lg:hidden flex items-center gap-2 px-5 py-2.5 bg-blue-100 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-200 transition-all shadow-sm"
-                    >
-                      <Share2 size={18} /> Compartilhar
-                    </button>
+                    <button onClick={() => exportTransactionsToCSV(transactions)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Download size={18} /> Backup CSV</button>
+                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário Anual</button>
                   </div>
               </div>
-              
-              <div className="w-full lg:w-1/3 bg-indigo-50 border border-indigo-100 rounded-3xl p-6 relative overflow-hidden group shadow-sm">
+              <div className="w-full lg:w-1/3 bg-brand-50/50 border border-brand-100 rounded-3xl p-6 relative overflow-hidden group shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`p-2 bg-indigo-600 text-white rounded-lg ${loadingAnalysis ? 'animate-pulse' : ''}`}>
-                      <BrainCircuit size={20} />
-                    </div>
+                    <div className={`p-2 bg-brand-600 text-white rounded-lg ${loadingAnalysis ? 'animate-pulse' : ''}`}><BrainCircuit size={20} /></div>
                     <div className="flex flex-col">
-                      <h4 className="font-bold text-indigo-900 uppercase text-xs tracking-widest">IA Conselheira</h4>
-                      <span className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter">Perfil: {currentProfile}</span>
+                      <h4 className="font-bold text-brand-900 uppercase text-xs tracking-widest leading-none">IA Conselheira</h4>
+                      <span className="text-[8px] font-black text-brand-500 uppercase tracking-tighter">Perfil: {currentProfile}</span>
                     </div>
-                    <button onClick={triggerAnalysis} className="ml-auto text-xs font-black text-indigo-600 hover:underline">REANALISAR</button>
+                    <button onClick={triggerAnalysis} className="ml-auto text-xs font-black text-brand-600 hover:underline">REANALISAR</button>
                   </div>
-                  <p className="text-sm text-indigo-800 leading-relaxed italic relative z-10">"{analysis}"</p>
-                  <div className="absolute -bottom-8 -right-8 text-indigo-100 opacity-30">
-                    <BrainCircuit size={120} />
-                  </div>
+                  <p className="text-sm text-brand-900/80 leading-relaxed italic relative z-10">"{analysis}"</p>
               </div>
             </div>
 
-            <GoogleCalendarIntegration transactions={transactions} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+               <GoogleCalendarIntegration 
+                transactions={transactions} 
+                birthdays={birthdays} 
+                onAddBirthday={handleAddBirthday}
+                onDeleteBirthday={handleDeleteBirthday}
+               />
+               <CategorySpendingChart transactions={transactions} />
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <FinanceCard 
-                title="PAGAR"
-                type={TransactionType.PAYABLE}
-                items={transactions.filter(t => t.type === TransactionType.PAYABLE)}
-                onAdd={handleAddTransaction}
-                onToggleStatus={handleToggleTransStatus}
-                onDelete={handleDeleteTrans}
-                isSyncActive={!!scriptUrl}
-              />
-              <FinanceCard 
-                title="RECEBER"
-                type={TransactionType.RECEIVABLE}
-                items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)}
-                onAdd={handleAddTransaction}
-                onToggleStatus={handleToggleTransStatus}
-                onDelete={handleDeleteTrans}
-                isSyncActive={!!scriptUrl}
-              />
-              <ReminderSection 
-                reminders={reminders}
-                onAdd={handleAddReminder}
-                onToggle={handleToggleReminder}
-                onDelete={handleDeleteReminder}
-              />
+              <FinanceCard title="PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
+              <FinanceCard title="RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
+              <ReminderSection reminders={reminders} onAdd={handleAddReminder} onToggle={handleToggleReminder} onDelete={handleDeleteReminder} />
             </div>
           </>
         );
@@ -285,67 +202,18 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar 
-        activeView={view} 
-        onViewChange={setView} 
-        onExport={handleExport} 
-        onShare={() => setIsShareModalOpen(true)}
-        onOpenProfiles={() => setIsProfileModalOpen(true)}
-        isSyncActive={!!scriptUrl} 
-        currentProfile={currentProfile}
-      />
-
+      <Sidebar activeView={view} onViewChange={setView} onExport={() => exportTransactionsToCSV(transactions)} onShare={() => setIsShareModalOpen(true)} onOpenProfiles={() => setIsProfileModalOpen(true)} isSyncActive={!!scriptUrl} currentProfile={currentProfile} currentTheme={theme} onThemeChange={setTheme} />
       <div className="flex-1 flex flex-col min-w-0">
         <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 lg:hidden">
           <div className="px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2" onClick={() => setView('dashboard')}>
-              <BrainCircuit className="text-blue-600" size={24} />
-              <span className="text-xl font-black tracking-tighter uppercase">Sem Neura</span>
-            </div>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            <div className="flex items-center gap-2" onClick={() => setView('dashboard')}><BrainCircuit className="text-brand-600" size={24} /><span className="text-xl font-black tracking-tighter uppercase">Sem Neura</span></div>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
           </div>
-          
-          {isMobileMenuOpen && (
-            <div className="p-4 space-y-4 bg-white border-t animate-in fade-in slide-in-from-top-4">
-              <button onClick={() => {setView('dashboard'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-700"><LayoutDashboard size={18}/> Dashboard</button>
-              <button onClick={() => {setView('pagar'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-rose-500">Pagar</button>
-              <button onClick={() => {setView('receber'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-emerald-500">Receber</button>
-              <button onClick={() => {setView('annual'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-700"><Calendar size={18}/> Calendário 2026</button>
-              <button onClick={() => {setView('settings'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-700"><Settings size={18}/> Configurações</button>
-              <button onClick={() => {setIsProfileModalOpen(true); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-900"><Users size={18}/> Trocar Perfil</button>
-            </div>
-          )}
         </nav>
-
-        <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto">
-          {renderMainContent()}
-        </main>
-
-        <footer className="p-10 border-t border-slate-200 mt-auto bg-white">
-           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-sm">
-              <p>&copy; 2026 SEM NEURA - Gestão de {currentProfile}</p>
-           </div>
-        </footer>
+        <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto">{renderMainContent()}</main>
       </div>
-
-      <ShareModal 
-        isOpen={isShareModalOpen} 
-        onClose={() => setIsShareModalOpen(false)} 
-        transactions={transactions}
-        isSyncActive={!!scriptUrl}
-      />
-
-      <ProfileModal 
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        profiles={profiles}
-        currentProfile={currentProfile}
-        onSelectProfile={setCurrentProfile}
-        onCreateProfile={handleCreateProfile}
-        onDeleteProfile={handleDeleteProfile}
-      />
+      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} transactions={transactions} isSyncActive={!!scriptUrl} />
+      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} profiles={profiles} currentProfile={currentProfile} onSelectProfile={setCurrentProfile} onCreateProfile={(name) => { setProfiles([...profiles, name]); setCurrentProfile(name); setIsProfileModalOpen(false); }} onDeleteProfile={(name) => { setProfiles(profiles.filter(p => p !== name)); if(currentProfile === name) setCurrentProfile('Padrão'); }} />
     </div>
   );
 };

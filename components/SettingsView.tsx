@@ -1,16 +1,26 @@
 
 import React, { useState } from 'react';
-import { Settings, Database, Shield, CheckCircle2, Copy, ExternalLink, HelpCircle, Send, AlertCircle, BrainCircuit, ArrowBigDownDash, RefreshCcw, XCircle, LayoutDashboard, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { Settings, Database, Shield, CheckCircle2, Copy, ExternalLink, HelpCircle, Send, AlertCircle, BrainCircuit, ArrowBigDownDash, RefreshCcw, XCircle, LayoutDashboard, ArrowRight, ArrowLeft, X, Palette, Check } from 'lucide-react';
 import { syncTransactionWithSheets } from '../services/googleSheets.ts';
-import { TransactionType } from '../types.ts';
+import { TransactionType, ThemeType } from '../types.ts';
 
 interface SettingsViewProps {
   scriptUrl: string;
   onUrlChange: (url: string) => void;
+  currentTheme: ThemeType;
+  onThemeChange: (theme: ThemeType) => void;
   onNavigateToDashboard: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ scriptUrl, onUrlChange, onNavigateToDashboard }) => {
+const THEME_OPTIONS: { id: ThemeType; color: string; label: string; desc: string }[] = [
+  { id: 'classic', color: 'bg-blue-600', label: 'Sem Neura Classic', desc: 'O azul profissional padrão.' },
+  { id: 'emerald', color: 'bg-emerald-600', label: 'Floresta Esmeralda', desc: 'Foco e tranquilidade verde.' },
+  { id: 'sunset', color: 'bg-rose-600', label: 'Sunset Rose', desc: 'Vibrante e cheio de energia.' },
+  { id: 'purple', color: 'bg-violet-600', label: 'Purple Night', desc: 'Moderno e sofisticado.' },
+  { id: 'midnight', color: 'bg-slate-700', label: 'Modo Midnight', desc: 'Visual escuro e sóbrio.' },
+];
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ scriptUrl, onUrlChange, currentTheme, onThemeChange, onNavigateToDashboard }) => {
   const [copied, setCopied] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
@@ -71,7 +81,6 @@ function doPost(e) {
     setTestResult(null);
   };
 
-  // Função para lidar com clique no fundo (fora do conteúdo principal)
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onNavigateToDashboard();
@@ -88,12 +97,12 @@ function doPost(e) {
           <div className="flex items-center gap-6">
             <button 
               onClick={onNavigateToDashboard}
-              className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 rounded-2xl transition-all shadow-sm group active:scale-95"
+              className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-brand-600 hover:border-brand-200 rounded-2xl transition-all shadow-sm group active:scale-95"
               title="Voltar ao Painel"
             >
               <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
             </button>
-            <div className="p-4 bg-blue-600 text-white rounded-[1.5rem] shadow-xl shadow-blue-100 hidden sm:block">
+            <div className="p-4 bg-brand-600 text-white rounded-[1.5rem] shadow-brand hidden sm:block transition-colors duration-500">
               <Settings size={32} />
             </div>
             <div>
@@ -110,27 +119,62 @@ function doPost(e) {
           </button>
         </header>
 
+        {/* SELETOR DE TEMAS */}
+        <section className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl overflow-hidden relative">
+          <div className="flex items-center gap-4 mb-10">
+            <div className="p-3 bg-brand-50 text-brand-600 rounded-2xl transition-colors duration-500">
+              <Palette size={28} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Tema e Aparência</h3>
+              <p className="text-slate-500 text-sm font-medium">Escolha a cor que melhor combina com seu dia</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {THEME_OPTIONS.map((theme) => (
+              <button
+                key={theme.id}
+                onClick={() => onThemeChange(theme.id)}
+                className={`flex flex-col items-start p-6 rounded-3xl border-2 transition-all group relative overflow-hidden ${currentTheme === theme.id ? 'border-brand-600 bg-brand-50/30' : 'border-slate-100 bg-slate-50/30 hover:border-slate-300'}`}
+              >
+                <div className={`w-12 h-12 rounded-2xl ${theme.color} mb-4 shadow-lg flex items-center justify-center text-white`}>
+                  {currentTheme === theme.id && <Check size={24} className="animate-in zoom-in" />}
+                </div>
+                <h4 className={`font-black text-sm uppercase tracking-tight mb-1 ${currentTheme === theme.id ? 'text-brand-900' : 'text-slate-900'}`}>{theme.label}</h4>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">{theme.desc}</p>
+                
+                {currentTheme === theme.id && (
+                  <div className="absolute top-4 right-4 text-brand-600">
+                    <CheckCircle2 size={20} />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* PAINEL DE CONEXÃO */}
-        <section className="bg-blue-600 rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-blue-200 text-white relative overflow-hidden border-4 border-white">
+        <section className="bg-brand-600 rounded-[3rem] p-8 md:p-10 shadow-brand text-white relative overflow-hidden border-4 border-white transition-colors duration-500">
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-8">
               <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl">
                 <Database size={32} />
               </div>
               <div>
-                <h3 className="text-2xl font-black uppercase tracking-tight">Conexão Google Sheets</h3>
-                <p className="text-blue-100 font-medium">Sincronize seus dados com o Passo 4</p>
+                <h3 className="text-2xl font-black uppercase tracking-tight text-white">Conexão Google Sheets</h3>
+                <p className="text-brand-100 font-medium">Sincronize seus dados com o Passo 4</p>
               </div>
             </div>
 
             <div className="space-y-8 bg-white/10 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/20">
               <div className="flex flex-col gap-4">
                  <div className="flex justify-between items-center">
-                   <label className="text-xs font-black uppercase tracking-[0.2em] text-blue-200 flex items-center gap-2">
+                   <label className="text-xs font-black uppercase tracking-[0.2em] text-white/80 flex items-center gap-2">
                      <ArrowBigDownDash size={16} /> URL do Script (Passo 4)
                    </label>
                    {scriptUrl && (
-                     <button onClick={handleClear} className="text-[10px] font-black uppercase text-blue-200 hover:text-white flex items-center gap-1 transition-colors">
+                     <button onClick={handleClear} className="text-[10px] font-black uppercase text-white/60 hover:text-white flex items-center gap-1 transition-colors">
                        <XCircle size={14} /> Limpar URL
                      </button>
                    )}
@@ -140,7 +184,7 @@ function doPost(e) {
                    value={scriptUrl}
                    onChange={(e) => onUrlChange(e.target.value)}
                    placeholder="Cole aqui o link gerado no Google (Ex: https://script.google.com/...)"
-                   className="w-full bg-white text-slate-900 p-6 rounded-2xl text-sm font-bold shadow-inner focus:ring-4 focus:ring-blue-400 outline-none transition-all placeholder:text-slate-300"
+                   className="w-full bg-white text-slate-900 p-6 rounded-2xl text-sm font-bold shadow-inner focus:ring-4 focus:ring-brand-100 outline-none transition-all placeholder:text-slate-300"
                  />
               </div>
 
@@ -157,7 +201,7 @@ function doPost(e) {
                       className={`flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all w-full md:w-auto shadow-2xl active:scale-95
                         ${testResult === 'success' ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 
                           testResult === 'error' ? 'bg-rose-500 text-white hover:bg-rose-600' : 
-                          'bg-white text-blue-600 hover:bg-blue-50 hover:shadow-white/20'}`}
+                          'bg-white text-brand-600 hover:bg-brand-50 hover:shadow-white/20'}`}
                     >
                       {testing ? 'TESTANDO...' : (
                         <>
@@ -168,7 +212,7 @@ function doPost(e) {
                     </button>
                   </>
                 ) : (
-                  <div className="w-full p-6 border-2 border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-3 text-blue-100 text-sm font-bold italic">
+                  <div className="w-full p-6 border-2 border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-3 text-white/60 text-sm font-bold italic">
                     <AlertCircle size={20} /> O botão de teste aparecerá assim que você colar a URL.
                   </div>
                 )}
@@ -197,7 +241,7 @@ function doPost(e) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <section className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl">
             <h4 className="font-black text-slate-800 uppercase text-sm tracking-[0.2em] mb-8 flex items-center gap-3">
-               <HelpCircle size={20} className="text-indigo-500" /> O que fazer agora?
+               <HelpCircle size={20} className="text-brand-600" /> O que fazer agora?
             </h4>
             <div className="space-y-6">
               {[
@@ -207,7 +251,7 @@ function doPost(e) {
                 { step: "D", text: "Fique sem neura: seus dados estão salvos e seguros na nuvem." }
               ].map(item => (
                 <div key={item.step} className="flex gap-5 group">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-sm text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner">{item.step}</div>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-sm text-slate-400 group-hover:bg-brand-600 group-hover:text-white transition-all shadow-inner">{item.step}</div>
                   <p className="text-sm text-slate-600 font-bold leading-relaxed pt-2">{item.text}</p>
                 </div>
               ))}
@@ -216,18 +260,18 @@ function doPost(e) {
 
           <section className="bg-slate-900 rounded-[2.5rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
             <div className="relative z-10">
-              <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-6">Código do Servidor</h4>
+              <h4 className="text-xs font-black text-brand-500 uppercase tracking-widest mb-6">Código do Servidor</h4>
               <div className="relative group rounded-3xl overflow-hidden border border-white/10 shadow-inner bg-black/40">
                 <div className="absolute top-4 right-4 z-10">
                   <button 
                     onClick={handleCopy}
-                    className="p-3 bg-white text-slate-900 rounded-xl hover:bg-blue-50 transition-all flex items-center gap-2 text-xs font-black shadow-lg"
+                    className="p-3 bg-white text-slate-900 rounded-xl hover:bg-brand-50 transition-all flex items-center gap-2 text-xs font-black shadow-lg"
                   >
                     {copied ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Copy size={16} />}
                     {copied ? 'COPIADO!' : 'COPIAR CÓDIGO'}
                   </button>
                 </div>
-                <pre className="p-8 text-[10px] leading-relaxed overflow-x-auto max-h-[300px] custom-scrollbar text-blue-200/70 font-mono">
+                <pre className="p-8 text-[10px] leading-relaxed overflow-x-auto max-h-[300px] custom-scrollbar text-brand-100/50 font-mono">
                   <code>{scriptCode}</code>
                 </pre>
               </div>
