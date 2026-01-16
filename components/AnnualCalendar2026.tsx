@@ -1,6 +1,11 @@
 
 import React from 'react';
-import { Calendar as CalendarIcon, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Info, Cake } from 'lucide-react';
+import { Birthday } from '../types';
+
+interface AnnualCalendar2026Props {
+  birthdays?: Birthday[];
+}
 
 // Feriados Nacionais Brasil 2026
 const HOLIDAYS_2026: Record<string, string> = {
@@ -19,7 +24,7 @@ const HOLIDAYS_2026: Record<string, string> = {
   '2026-12-25': 'Natal',
 };
 
-export const AnnualCalendar2026: React.FC = () => {
+export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthdays = [] }) => {
   const months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -48,26 +53,37 @@ export const AnnualCalendar2026: React.FC = () => {
             <div key={`b-${b}`} className="aspect-square"></div>
           ))}
           {monthDays.map(day => {
-            const dateKey = `${year}-${(monthIdx + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            const dateSuffix = `${(monthIdx + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            const dateKey = `${year}-${dateSuffix}`;
             const holidayName = HOLIDAYS_2026[dateKey];
+            const dayBirths = birthdays.filter(b => b.date.endsWith(dateSuffix));
             const dayOfWeek = (day + startDay - 1) % 7;
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+            const tooltipText = [
+              holidayName ? `Feriado: ${holidayName}` : '',
+              dayBirths.length > 0 ? `Niver: ${dayBirths.map(b => b.name).join(', ')}` : ''
+            ].filter(Boolean).join(' | ');
 
             return (
               <div 
                 key={day} 
-                title={holidayName || ''}
+                title={tooltipText}
                 className={`aspect-square flex flex-col items-center justify-center text-[10px] font-bold rounded-lg transition-all relative cursor-default
                   ${holidayName 
                     ? 'bg-rose-500 text-white shadow-sm ring-1 ring-rose-300' 
                     : isWeekend 
                       ? 'bg-slate-50 text-slate-400' 
-                      : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'}
+                      : 'text-slate-600 hover:bg-brand-50 hover:text-brand-600'}
+                  ${dayBirths.length > 0 && !holidayName ? 'ring-2 ring-amber-400 bg-amber-50 text-amber-700' : ''}
                 `}
               >
                 {day}
                 {holidayName && (
                    <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-white rounded-full border border-rose-500"></div>
+                )}
+                {dayBirths.length > 0 && (
+                   <div className={`absolute -bottom-1 -left-1 w-1.5 h-1.5 rounded-full border border-white ${holidayName ? 'bg-amber-400' : 'bg-amber-600'}`}></div>
                 )}
               </div>
             );
@@ -81,12 +97,12 @@ export const AnnualCalendar2026: React.FC = () => {
     <div className="bg-white rounded-[2.5rem] p-6 md:p-10 border border-slate-100 shadow-xl animate-in fade-in slide-in-from-bottom-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-6">
         <div className="flex items-center gap-4">
-          <div className="p-4 bg-indigo-600 text-white rounded-[1.5rem] shadow-lg shadow-indigo-100">
+          <div className="p-4 bg-brand-600 text-white rounded-[1.5rem] shadow-lg shadow-brand/20">
             <CalendarIcon size={28} />
           </div>
           <div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1">CALENDÁRIO ANUAL</h2>
-            <p className="text-slate-500 text-sm font-medium">Visualização completa dos feriados de 2026</p>
+            <p className="text-slate-500 text-sm font-medium">Visualização completa de 2026 integrada</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-xl tracking-widest shadow-xl">
@@ -100,21 +116,28 @@ export const AnnualCalendar2026: React.FC = () => {
       
       <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
         <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Info size={14} className="text-indigo-500" /> Legenda do Ano
+          <Info size={14} className="text-brand-500" /> Legenda do Ano
         </h5>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white text-[10px] font-black shadow-sm ring-2 ring-rose-100">12</div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-800">Datas Comemorativas</span>
-              <span className="text-[10px] text-slate-400 font-medium uppercase">Feriados Nacionais</span>
+              <span className="text-sm font-bold text-slate-800">Feriados</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Datas Nacionais</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-[10px] font-black ring-2 ring-amber-400">05</div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-800">Aniversários</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Datas Especiais</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-[10px] font-black border border-slate-200">S/D</div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-slate-800">Finais de Semana</span>
-              <span className="text-[10px] text-slate-400 font-medium uppercase">Sábados e Domingos</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Folga</span>
             </div>
           </div>
           <div className="flex items-center gap-3">

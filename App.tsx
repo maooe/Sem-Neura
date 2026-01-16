@@ -13,7 +13,7 @@ import { ProfileModal } from './components/ProfileModal.tsx';
 import { getFinancialHealthAnalysis } from './services/gemini.ts';
 import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
-import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users, Palette } from 'lucide-react';
+import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users, Palette, CheckCircle } from 'lucide-react';
 
 const THEMES: Record<ThemeType, any> = {
   classic: { 600: '#2563eb', 500: '#3b82f6', 100: '#dbeafe', 50: '#eff6ff', 900: '#1e3a8a', shadow: 'rgba(37, 99, 235, 0.15)' },
@@ -24,28 +24,20 @@ const THEMES: Record<ThemeType, any> = {
 };
 
 const App: React.FC = () => {
-  // Estado de Perfis
   const [profiles, setProfiles] = useState<string[]>(['Padrão']);
   const [currentProfile, setCurrentProfile] = useState<string>('Padrão');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
-  // Tema Atual
   const [theme, setTheme] = useState<ThemeType>('classic');
-
-  // Dados do Perfil Atual
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [scriptUrl, setScriptUrl] = useState<string>('');
-  
-  // UI States
-  const [analysis, setAnalysis] = useState<string>('Boas-vindas! Comece alimentando seus dados para uma análise sem neura.');
+  const [analysis, setAnalysis] = useState<string>('Carregando sua análise diária...');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [view, setView] = useState<'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings'>('dashboard');
 
-  // Chaves de Armazenamento Dinâmicas
   const STORAGE_KEYS = useMemo(() => ({
     PROFILES_LIST: 'sn_profiles_list_v1',
     CURRENT_PROFILE: 'sn_current_profile_active',
@@ -53,10 +45,11 @@ const App: React.FC = () => {
     REMINDERS: `sn_${currentProfile}_reminders_v3`,
     BIRTHDAYS: `sn_${currentProfile}_birthdays_v1`,
     SCRIPT_URL: `sn_${currentProfile}_script_url`,
-    THEME: `sn_${currentProfile}_theme`
+    THEME: `sn_${currentProfile}_theme`,
+    LAST_ANALYSIS: `sn_${currentProfile}_last_analysis_date`
   }), [currentProfile]);
 
-  // Aplicar cores do tema ao :root
+  // Aplicar cores do tema
   useEffect(() => {
     const colors = THEMES[theme];
     const root = document.documentElement;
@@ -68,38 +61,52 @@ const App: React.FC = () => {
     root.style.setProperty('--brand-shadow', colors.shadow);
   }, [theme]);
 
-  // Carregar Dados
-  useEffect(() => {
-    const savedProfiles = localStorage.getItem(STORAGE_KEYS.PROFILES_LIST);
-    const savedActive = localStorage.getItem(STORAGE_KEYS.CURRENT_PROFILE);
-    if (savedProfiles) setProfiles(JSON.parse(savedProfiles));
-    if (savedActive) setCurrentProfile(savedActive);
-  }, []);
-
+  // Carregar dados e disparar análise automática se for um novo dia
   useEffect(() => {
     const savedTrans = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
     const savedRemind = localStorage.getItem(STORAGE_KEYS.REMINDERS);
     const savedBirth = localStorage.getItem(STORAGE_KEYS.BIRTHDAYS);
     const savedUrl = localStorage.getItem(STORAGE_KEYS.SCRIPT_URL);
     const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) as ThemeType;
+    const lastDate = localStorage.getItem(STORAGE_KEYS.LAST_ANALYSIS);
     
-    setTransactions(savedTrans ? JSON.parse(savedTrans) : []);
-    setReminders(savedRemind ? JSON.parse(savedRemind) : []);
+    const transData = savedTrans ? JSON.parse(savedTrans) : [];
+    const remindData = savedRemind ? JSON.parse(savedRemind) : [];
+    
+    setTransactions(transData);
+    setReminders(remindData);
     setBirthdays(savedBirth ? JSON.parse(savedBirth) : []);
     setScriptUrl(savedUrl || '');
     if (savedTheme && THEMES[savedTheme]) setTheme(savedTheme);
+
+    // Lógica de Auto-Análise Diária
+    const today = new Date().toISOString().split('T')[0];
+    if (lastDate !== today && (transData.length > 0 || remindData.length > 0)) {
+      triggerAnalysis();
+    } else {
+      setAnalysis('Sua análise está atualizada para hoje. Tudo sob controle!');
+    }
   }, [currentProfile, STORAGE_KEYS]);
 
-  // Salvar Dados
+  // Efeito de Salvamento Automático
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
     localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
     localStorage.setItem(STORAGE_KEYS.BIRTHDAYS, JSON.stringify(birthdays));
     localStorage.setItem(STORAGE_KEYS.SCRIPT_URL, scriptUrl);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_PROFILE, currentProfile);
-    localStorage.setItem(STORAGE_KEYS.PROFILES_LIST, JSON.stringify(profiles));
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
-  }, [transactions, reminders, birthdays, scriptUrl, currentProfile, profiles, theme, STORAGE_KEYS]);
+  }, [transactions, reminders, birthdays, scriptUrl, theme, STORAGE_KEYS]);
+
+  const triggerAnalysis = useCallback(async () => {
+    setLoadingAnalysis(true);
+    const result = await getFinancialHealthAnalysis(transactions, reminders, !!scriptUrl);
+    setAnalysis(result || "Análise concluída.");
+    setLoadingAnalysis(false);
+    
+    // Salva a data da última análise
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem(STORAGE_KEYS.LAST_ANALYSIS, today);
+  }, [transactions, reminders, scriptUrl, STORAGE_KEYS]);
 
   const handleAddBirthday = (name: string, date: string) => {
     const newBirth: Birthday = { id: Math.random().toString(36).substr(2, 9), name, date };
@@ -137,22 +144,19 @@ const App: React.FC = () => {
     setReminders(prev => [...prev, newRem]);
   };
 
+  const handleUpdateReminder = (id: string, updates: Partial<Reminder>) => {
+    setReminders(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
   const handleToggleReminder = (id: string) => setReminders(prev => prev.map(r => r.id === id ? { ...r, completed: !r.completed } : r));
   const handleDeleteReminder = (id: string) => setReminders(prev => prev.filter(r => r.id !== id));
-
-  const triggerAnalysis = useCallback(async () => {
-    setLoadingAnalysis(true);
-    const result = await getFinancialHealthAnalysis(transactions, reminders, !!scriptUrl);
-    setAnalysis(result || "Análise concluída.");
-    setLoadingAnalysis(false);
-  }, [transactions, reminders, scriptUrl]);
 
   const renderMainContent = () => {
     switch (view) {
       case 'settings':
         return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} currentTheme={theme} onThemeChange={setTheme} onNavigateToDashboard={() => setView('dashboard')} />;
       case 'annual':
-        return <AnnualCalendar2026 />;
+        return <AnnualCalendar2026 birthdays={birthdays} />;
       default:
         return (
           <>
@@ -160,40 +164,50 @@ const App: React.FC = () => {
               <div className="flex-1 w-full">
                   <div className="flex items-center gap-3 mb-2">
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tighter uppercase">Janeiro <span className="text-brand-600">2026</span></h1>
-                    {scriptUrl && <div className="hidden sm:flex items-center gap-2 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black animate-in slide-in-from-left-4 duration-500"><Cloud size={14} /> NUVEM ATIVA</div>}
+                    <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-[11px] font-black border border-emerald-200 shadow-sm animate-pulse">
+                      <CheckCircle size={14} /> SALVAMENTO ATIVO
+                    </div>
                   </div>
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <button onClick={() => exportTransactionsToCSV(transactions)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Download size={18} /> Backup CSV</button>
-                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário Anual</button>
+                    <button onClick={() => exportTransactionsToCSV(transactions)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black text-xs uppercase hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Download size={18} /> Backup CSV</button>
+                    <button onClick={() => setView('annual')} className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-slate-800 font-black text-xs uppercase hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm"><Calendar size={18} className="text-brand-600" /> Calendário Anual</button>
                   </div>
               </div>
-              <div className="w-full lg:w-1/3 bg-brand-50/50 border border-brand-100 rounded-3xl p-6 relative overflow-hidden group shadow-sm">
+              <div className="w-full lg:w-1/3 bg-brand-50 border-2 border-brand-200 rounded-[2rem] p-6 shadow-brand relative overflow-hidden group">
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`p-2 bg-brand-600 text-white rounded-lg ${loadingAnalysis ? 'animate-pulse' : ''}`}><BrainCircuit size={20} /></div>
                     <div className="flex flex-col">
-                      <h4 className="font-bold text-brand-900 uppercase text-xs tracking-widest leading-none">IA Conselheira</h4>
-                      <span className="text-[8px] font-black text-brand-500 uppercase tracking-tighter">Perfil: {currentProfile}</span>
+                      <h4 className="font-black text-brand-900 uppercase text-xs tracking-widest leading-none">IA Conselheira</h4>
+                      <span className="text-[10px] font-black text-brand-600 uppercase tracking-tighter mt-1">Status: {loadingAnalysis ? 'Analisando...' : 'Análise do Dia'}</span>
                     </div>
-                    <button onClick={triggerAnalysis} className="ml-auto text-xs font-black text-brand-600 hover:underline">REANALISAR</button>
+                    <button 
+                      onClick={triggerAnalysis} 
+                      className="ml-auto text-[11px] font-black text-white bg-brand-600 px-4 py-2 rounded-full hover:bg-brand-700 hover:scale-105 active:scale-95 transition-all shadow-md border border-brand-500/30"
+                    >
+                      {loadingAnalysis ? '...' : 'REANALISAR'}
+                    </button>
                   </div>
-                  <p className="text-sm text-brand-900/80 leading-relaxed italic relative z-10">"{analysis}"</p>
+                  <div className="bg-white/40 p-4 rounded-xl border border-white/60 min-h-[80px]">
+                    <p className="text-sm text-slate-900 font-bold leading-relaxed italic relative z-10">"{analysis}"</p>
+                  </div>
+                  <div className="mt-3 text-[9px] font-black text-brand-400 uppercase tracking-widest text-right">
+                    Auto-save ativado em {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-               <GoogleCalendarIntegration 
-                transactions={transactions} 
-                birthdays={birthdays} 
-                onAddBirthday={handleAddBirthday}
-                onDeleteBirthday={handleDeleteBirthday}
-               />
-               <CategorySpendingChart transactions={transactions} />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <FinanceCard title="PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
-              <FinanceCard title="RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
-              <ReminderSection reminders={reminders} onAdd={handleAddReminder} onToggle={handleToggleReminder} onDelete={handleDeleteReminder} />
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
+              <div className="xl:col-span-2 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <FinanceCard title="CONTAS A PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
+                  <FinanceCard title="CONTAS A RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
+                </div>
+                <GoogleCalendarIntegration transactions={transactions} birthdays={birthdays} onAddBirthday={handleAddBirthday} onDeleteBirthday={handleDeleteBirthday} />
+              </div>
+              <div className="space-y-8 flex flex-col">
+                <ReminderSection reminders={reminders} onAdd={handleAddReminder} onToggle={handleToggleReminder} onUpdate={handleUpdateReminder} onDelete={handleDeleteReminder} />
+                <CategorySpendingChart transactions={transactions} />
+              </div>
             </div>
           </>
         );

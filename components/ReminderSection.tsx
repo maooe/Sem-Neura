@@ -1,109 +1,117 @@
 
 import React, { useState } from 'react';
 import { Reminder } from '../types';
-import { Plus, Bell, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Bell, Trash2, Check, Edit2, Save, X } from 'lucide-react';
 
 interface ReminderSectionProps {
   reminders: Reminder[];
   onAdd: (text: string, priority: Reminder['priority']) => void;
   onToggle: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<Reminder>) => void;
   onDelete: (id: string) => void;
 }
 
-export const ReminderSection: React.FC<ReminderSectionProps> = ({ reminders, onAdd, onToggle, onDelete }) => {
-  const [text, setText] = useState('');
-  const [priority, setPriority] = useState<Reminder['priority']>('MEDIUM');
+const POST_IT_COLORS = [
+  'bg-yellow-100 border-yellow-300',
+  'bg-pink-100 border-pink-300',
+  'bg-blue-100 border-blue-300',
+  'bg-emerald-100 border-emerald-300',
+  'bg-purple-100 border-purple-300',
+];
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    onAdd(text, priority);
-    setText('');
+export const ReminderSection: React.FC<ReminderSectionProps> = ({ 
+  reminders, 
+  onAdd, 
+  onToggle, 
+  onUpdate,
+  onDelete 
+}) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  const handleStartEdit = (rem: Reminder) => {
+    setEditingId(rem.id);
+    setEditText(rem.text);
   };
 
-  const getPriorityColor = (p: Reminder['priority']) => {
-    switch (p) {
-      case 'HIGH': return 'bg-red-500';
-      case 'MEDIUM': return 'bg-amber-500';
-      case 'LOW': return 'bg-blue-500';
-      default: return 'bg-slate-400';
-    }
+  const handleSaveEdit = (id: string) => {
+    onUpdate(id, { text: editText.trim() });
+    setEditingId(null);
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-          <Bell size={24} />
+    <div className="bg-slate-100/50 rounded-[2.5rem] p-8 border border-slate-200/60 shadow-inner flex flex-col min-h-[400px]">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-slate-900 text-white rounded-2xl shadow-lg">
+            <Bell size={20} />
+          </div>
+          <div>
+            <h3 className="font-black text-lg text-slate-800 tracking-tighter uppercase leading-none">Mural Sem Neura</h3>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Post-its rápidos</p>
+          </div>
         </div>
-        <h3 className="font-bold text-xl text-slate-800 tracking-tight">LEMBRETES</h3>
+        <button
+          onClick={() => onAdd('', 'MEDIUM')}
+          className="p-3 bg-brand-600 text-white rounded-2xl hover:bg-brand-500 transition-all shadow-brand active:scale-90 group"
+        >
+          <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+        </button>
       </div>
 
-      <form onSubmit={handleAdd} className="mb-6 space-y-3">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="O que você precisa lembrar?"
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm"
-        />
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            {(['LOW', 'MEDIUM', 'HIGH'] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPriority(p)}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${priority === p ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                {p === 'HIGH' ? 'Urgente' : p === 'MEDIUM' ? 'Médio' : 'Livre'}
-              </button>
-            ))}
-          </div>
-          <button
-            type="submit"
-            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95"
-          >
-            <Plus size={20} />
-          </button>
-        </div>
-      </form>
-
-      <div className="flex-1 overflow-y-auto space-y-3 max-h-[400px] pr-2 custom-scrollbar">
+      <div className="grid grid-cols-2 gap-4 auto-rows-fr overflow-y-auto custom-scrollbar pr-1 max-h-[600px]">
         {reminders.length === 0 && (
-          <div className="text-center py-10">
-            <p className="text-slate-400 text-sm">Tudo tranquilo por aqui!</p>
+          <div className="col-span-2 py-12 flex flex-col items-center justify-center opacity-30 text-slate-500">
+            <Plus size={48} className="mb-4" />
+            <p className="text-xs font-black uppercase tracking-widest">Clique no + para colar</p>
           </div>
         )}
-        {reminders.map((rem) => (
-          <div
-            key={rem.id}
-            className={`flex items-center justify-between p-4 rounded-xl border border-slate-100 transition-all hover:shadow-sm ${rem.completed ? 'bg-slate-50 opacity-60' : 'bg-white'}`}
-          >
-            <div className="flex items-center gap-4">
-              <input
-                type="checkbox"
-                checked={rem.completed}
-                onChange={() => onToggle(rem.id)}
-                className="w-5 h-5 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-              />
-              <div className="flex flex-col">
-                <span className={`text-sm font-medium text-slate-700 ${rem.completed ? 'line-through' : ''}`}>
-                  {rem.text}
-                </span>
-                <span className={`text-[10px] uppercase font-black mt-1 ${getPriorityColor(rem.priority)} text-white px-2 py-0.5 rounded-full w-fit`}>
-                  {rem.priority}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => onDelete(rem.id)}
-              className="text-slate-300 hover:text-red-500 transition-colors p-1"
+        
+        {reminders.map((rem, index) => {
+          const colorClass = POST_IT_COLORS[index % POST_IT_COLORS.length];
+          const isEditing = editingId === rem.id || rem.text === '';
+          const rotation = (index % 3 === 0 ? '-rotate-1' : index % 3 === 1 ? 'rotate-1' : '-rotate-2');
+
+          return (
+            <div
+              key={rem.id}
+              className={`relative aspect-square p-4 rounded-lg shadow-md border-b-4 transition-all hover:scale-105 hover:z-10 group
+                ${colorClass} ${rotation} ${rem.completed ? 'opacity-50 grayscale-[0.2]' : ''}
+                flex flex-col text-slate-900
+              `}
             >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
+              <div className="flex justify-between items-start mb-2">
+                <button 
+                  onClick={() => onToggle(rem.id)}
+                  className={`p-1 rounded-md transition-colors ${rem.completed ? 'bg-green-600 text-white' : 'bg-black/5 text-slate-400'}`}
+                >
+                  <Check size={14} strokeWidth={3} />
+                </button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button onClick={() => onDelete(rem.id)} className="p-1 hover:bg-rose-500 hover:text-white rounded text-slate-400"><Trash2 size={12} /></button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-hidden cursor-text" onClick={() => !isEditing && handleStartEdit(rem)}>
+                {isEditing ? (
+                  <textarea
+                    autoFocus
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onBlur={() => handleSaveEdit(rem.id)}
+                    className="w-full h-full bg-transparent outline-none resize-none font-bold text-sm leading-tight text-slate-900 placeholder:text-slate-400"
+                    placeholder="Escreva algo..."
+                  />
+                ) : (
+                  <p className={`text-sm font-black leading-tight break-words text-slate-900 ${rem.completed ? 'line-through opacity-40' : ''}`}>
+                    {rem.text || 'Toque para editar...'}
+                  </p>
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 w-4 h-4 bg-black/5 rounded-tl-xl pointer-events-none" />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

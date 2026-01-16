@@ -119,8 +119,8 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className={`font-bold text-slate-800 ${item.status === 'PAID' ? 'line-through opacity-50' : ''}`}>{item.description}</p>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                        item.categoryKind === 'VARIABLE' ? 'bg-amber-100 text-amber-600' : 'bg-brand-100 text-brand-600'
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                        item.categoryKind === 'VARIABLE' ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700'
                       }`}>
                         {item.categoryKind === 'FIXED' ? 'Fixo' : item.categoryKind === 'RECURRING' ? 'Recorrente' : 'Variável'}
                       </span>
@@ -131,7 +131,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                         <Clock size={12} />
                         {new Date(item.dueDate).toLocaleDateString('pt-BR')}
                       </div>
-                      <div className="font-black text-slate-700 flex items-center gap-1.5">
+                      <div className="font-black text-slate-900 flex items-center gap-1.5">
                         R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         {isSyncActive && <span title="Sincronizado na nuvem"><Cloud size={12} className="text-emerald-500 opacity-60" /></span>}
                       </div>
@@ -139,19 +139,19 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
 
                     <div className="flex items-center gap-3 mt-2">
                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                         item.status === 'PAID' ? 'bg-green-50 text-green-600 border-green-100' : 
-                         item.status === 'OVERDUE' ? 'bg-red-50 text-red-600 border-red-100' :
-                         'bg-amber-50 text-amber-600 border-amber-100'
+                         item.status === 'PAID' ? 'bg-green-50 text-green-700 border-green-200' : 
+                         item.status === 'OVERDUE' ? 'bg-red-50 text-red-700 border-red-200' :
+                         'bg-amber-50 text-amber-700 border-amber-200'
                        }`}>
                          {statusLabels[item.status]}
                        </span>
-                       <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                       <span className="flex items-center gap-1 text-[10px] font-medium text-slate-500">
                           {methodIcons[item.paymentMethod]} {item.paymentMethod}
                        </span>
                     </div>
                   </div>
                 </div>
-                <button onClick={() => onDelete(item.id)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1">
+                <button onClick={() => onDelete(item.id)} className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -166,30 +166,30 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
             </h4>
             
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-1">
-                {isPayable ? "Descrição" : "Cliente"}
+              <label className="text-[10px] font-black text-slate-500 uppercase ml-2 flex items-center gap-1">
+                {isPayable ? "O que pagar?" : "De quem receber?"}
               </label>
               <input 
                 type="text" 
-                placeholder={isPayable ? "Ex: Aluguel, Luz, Internet" : "Nome do Cliente"} 
-                className="w-full p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none shadow-inner placeholder:text-slate-500 transition-all font-medium"
+                placeholder={isPayable ? "Ex: Aluguel, Internet" : "Ex: Cliente João"} 
+                className="w-full p-4 bg-slate-50 text-slate-900 border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none placeholder:text-slate-400 transition-all font-bold"
                 value={description} onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-                {isPayable ? "Tipo de Conta" : "Tipo de Cliente"}
+              <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
+                Tipo
               </label>
-              <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                 {categories.map((k) => (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setCategoryKind(k)}
-                    className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all duration-300 ${categoryKind === k ? 'bg-brand-600 text-white shadow-brand ring-2 ring-brand-600 ring-offset-1' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                    className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all duration-300 ${categoryKind === k ? 'bg-brand-600 text-white shadow-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}
                   >
-                    {k === 'FIXED' ? 'CUSTO FIXO' : k === 'RECURRING' ? 'RECORRENTE' : 'VARIÁVEL'}
+                    {k === 'FIXED' ? 'FIXO' : k === 'RECURRING' ? 'RECORRENTE' : 'VARIÁVEL'}
                   </button>
                 ))}
               </div>
@@ -197,60 +197,25 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Valor</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Valor</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-500">R$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">R$</span>
                   <input 
                     type="number" 
                     placeholder="0,00" 
-                    className="w-full pl-11 p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none shadow-inner placeholder:text-slate-500 font-bold"
+                    className="w-full pl-11 p-4 bg-slate-50 text-slate-900 border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none font-black"
                     value={amount} onChange={(e) => setAmount(e.target.value)}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Vencimento</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Data</label>
                 <input 
                   type="date" 
-                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-600 font-medium"
+                  className="w-full p-4 bg-slate-50 border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-900 font-bold"
                   value={dueDate} onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Status</label>
-                <select 
-                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-600 font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-                  value={status} onChange={(e) => setStatus(e.target.value as ExtendedStatus)}
-                >
-                  {Object.entries(statusLabels).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Meio</label>
-                <select 
-                  className="w-full p-4 bg-white border-slate-200 border-2 rounded-2xl text-sm focus:ring-0 focus:border-brand-500 outline-none text-slate-600 font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-                  value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                >
-                  <option value="PIX">PIX</option>
-                  <option value="CASH">Dinheiro</option>
-                  <option value="CARD">Cartão</option>
-                  <option value="OTHER">Outros</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Observação</label>
-              <textarea 
-                placeholder="Detalhes adicionais..." 
-                className="w-full p-4 bg-[#333333] text-white border-transparent border-2 rounded-2xl text-sm h-24 resize-none focus:ring-0 focus:border-brand-500 outline-none shadow-inner placeholder:text-slate-500 font-medium"
-                value={observation} onChange={(e) => setObservation(e.target.value)}
-              />
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -259,22 +224,15 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
                 disabled={isSaved}
                 className={`flex-1 py-4 rounded-2xl text-sm font-black shadow-brand transition-all active:scale-95 flex items-center justify-center gap-2 ${
                   isSaved 
-                  ? 'bg-emerald-500 text-white shadow-emerald-200' 
-                  : 'bg-brand-600 text-white shadow-brand hover:bg-brand-500'
+                  ? 'bg-emerald-500 text-white' 
+                  : 'bg-brand-600 text-white hover:bg-brand-500'
                 }`}
               >
-                {isSaved ? (
-                  <>
-                    <Check size={18} className="animate-in zoom-in duration-300" />
-                    SALVO!
-                  </>
-                ) : (
-                  'SALVAR'
-                )}
+                {isSaved ? 'SALVO!' : 'SALVAR'}
               </button>
               <button 
                 onClick={() => setShowAdd(false)} 
-                className="flex-1 bg-slate-50 text-slate-400 py-4 rounded-2xl text-sm font-bold border border-slate-200 hover:bg-slate-100 transition-all"
+                className="flex-1 bg-white text-slate-400 py-4 rounded-2xl text-sm font-bold border border-slate-200 hover:bg-slate-50 transition-all"
               >
                 CANCELAR
               </button>
@@ -286,7 +244,7 @@ export const FinanceCard: React.FC<FinanceCardProps> = ({
       {!showAdd && (
         <button 
           onClick={() => setShowAdd(true)}
-          className={`m-6 flex items-center justify-center gap-2 py-5 rounded-[1.5rem] shadow-xl transition-all font-black text-xs uppercase tracking-widest active:scale-95 text-white ${isPayable ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-100' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100'}`}
+          className={`m-6 flex items-center justify-center gap-2 py-5 rounded-[1.5rem] shadow-xl transition-all font-black text-xs uppercase tracking-widest active:scale-95 text-white ${isPayable ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
         >
           <Plus size={20} /> LANÇAR {type}
         </button>
