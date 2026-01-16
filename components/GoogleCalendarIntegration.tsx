@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Calendar as CalendarIcon, ExternalLink, RefreshCw, Info, Cake, Plus, Trash2, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calendar as CalendarIcon, Cake, Plus, Trash2, X } from 'lucide-react';
 import { Transaction, TransactionType, Birthday } from '../types';
 
 interface GoogleCalendarIntegrationProps {
@@ -10,21 +10,23 @@ interface GoogleCalendarIntegrationProps {
   onDeleteBirthday: (id: string) => void;
 }
 
-const HOLIDAYS_2026: Record<string, string> = {
-  '2026-01-01': 'Ano Novo',
-  '2026-02-16': 'Carnaval',
-  '2026-02-17': 'Carnaval',
-  '2026-04-03': 'Sexta-feira Santa',
-  '2026-04-21': 'Tiradentes',
-  '2026-05-01': 'Dia do Trabalho',
-  '2026-06-04': 'Corpus Christi',
-  '2026-09-07': 'Independência do Brasil',
-  '2026-10-12': 'Nossa Senhora Aparecida',
-  '2026-11-02': 'Finados',
-  '2026-11-15': 'Proclamação da República',
-  '2026-11-20': 'Consciência Negra',
-  '2026-12-25': 'Natal',
+// Feriados Estáticos (Exemplo para 2024-2026)
+const HOLIDAYS: Record<string, string> = {
+  '01-01': 'Ano Novo',
+  '04-21': 'Tiradentes',
+  '05-01': 'Dia do Trabalho',
+  '09-07': 'Independência',
+  '10-12': 'N. Sra. Aparecida',
+  '11-02': 'Finados',
+  '11-15': 'Proclamação da República',
+  '11-20': 'Consciência Negra',
+  '12-25': 'Natal',
 };
+
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
 
 export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps> = ({ 
   transactions, 
@@ -32,20 +34,29 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
   onAddBirthday, 
   onDeleteBirthday 
 }) => {
-  const [isConnected, setIsConnected] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDate, setNewDate] = useState('');
   
-  const currentMonth = 0; // Janeiro
-  const daysInMonth = 31;
-  const startDayOffset = 4; // Janeiro 2026 começa na Quinta
+  // Lógica Dinâmica para Data Atual
+  const now = useMemo(() => new Date(), []);
+  const currentDay = now.getDate();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const daysInMonth = useMemo(() => new Date(currentYear, currentMonth + 1, 0).getDate(), [currentYear, currentMonth]);
+  const startDayOffset = useMemo(() => new Date(currentYear, currentMonth, 1).getDay(), [currentYear, currentMonth]);
 
   const getDayEvents = (day: number) => {
-    const dateStr = `2026-01-${day.toString().padStart(2, '0')}`;
+    const dayStr = day.toString().padStart(2, '0');
+    const monthStr = (currentMonth + 1).toString().padStart(2, '0');
+    const dateStr = `${currentYear}-${monthStr}-${dayStr}`;
+    const holidayKey = `${monthStr}-${dayStr}`;
+    
     const trans = transactions.filter(t => t.dueDate === dateStr);
-    const dayBirths = birthdays.filter(b => b.date.endsWith(`-01-${day.toString().padStart(2, '0')}`));
-    return { trans, births: dayBirths, holiday: HOLIDAYS_2026[dateStr] };
+    const dayBirths = birthdays.filter(b => b.date.endsWith(`-${monthStr}-${dayStr}`));
+    
+    return { trans, births: dayBirths, holiday: HOLIDAYS[holidayKey] };
   };
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -65,8 +76,8 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
             <CalendarIcon size={28} className="text-brand-500" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Agenda Janeiro 2026</h2>
-            <p className="text-slate-400 text-sm">Finanças e Aniversários integrados</p>
+            <h2 className="text-2xl font-bold tracking-tight">Agenda de {MONTH_NAMES[currentMonth]} {currentYear}</h2>
+            <p className="text-slate-400 text-sm">Finanças e Aniversários atualizados em tempo real</p>
           </div>
         </div>
         
@@ -79,7 +90,7 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
             {showAddForm ? 'Fechar' : 'Novo Aniversário'}
           </button>
           <div className="hidden sm:flex items-center gap-2 bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-[10px] font-bold border border-green-500/30">
-            GOOGLE SYNC ATIVO
+            SISTEMA VIGENTE
           </div>
         </div>
       </div>
@@ -117,9 +128,10 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const { trans, births, holiday } = getDayEvents(day);
-              const dayOfWeek = (day + startDayOffset - 1) % 7;
-              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-              const isToday = day === 15;
+              const dayOfWeek = (day + startDayOffset) % 7;
+              const isWeekend = dayOfWeek === 1 || dayOfWeek === 0;
+              // Lógica dinâmica de Hoje
+              const isToday = day === currentDay;
 
               return (
                 <div key={i} className={`aspect-square p-2 rounded-2xl border transition-all group relative cursor-pointer flex flex-col items-center justify-center gap-1
@@ -130,16 +142,21 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
                 `}>
                   <span className={`text-sm font-black ${holiday ? 'text-rose-500' : ''} ${births.length > 0 && !isToday ? 'text-amber-500' : ''} ${isToday ? 'text-white' : ''}`}>{day}</span>
                   <div className="flex gap-0.5">
-                    {trans.some(t => t.type === TransactionType.PAYABLE) && <div className={`w-1 h-1 rounded-full ${isToday ? 'bg-white' : 'bg-rose-500'}`} />}
-                    {trans.some(t => t.type === TransactionType.RECEIVABLE) && <div className={`w-1 h-1 rounded-full ${isToday ? 'bg-white' : 'bg-emerald-500'}`} />}
-                    {births.length > 0 && <Cake size={8} className={isToday ? 'text-white' : 'text-amber-500'} />}
+                    {trans.some(t => t.type === TransactionType.PAYABLE) && <div className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-white shadow-[0_0_8px_white]' : 'bg-rose-500'}`} />}
+                    {trans.some(t => t.type === TransactionType.RECEIVABLE) && <div className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-white shadow-[0_0_8px_white]' : 'bg-emerald-500'}`} />}
+                    {births.length > 0 && <Cake size={10} className={isToday ? 'text-white' : 'text-amber-500'} />}
                   </div>
                   
                   {(holiday || births.length > 0 || trans.length > 0) && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 hidden group-hover:block bg-slate-900 text-white text-[9px] p-2 rounded-lg shadow-xl z-20 pointer-events-none">
-                      {holiday && <p className="font-bold text-rose-400">Feriado: {holiday}</p>}
-                      {births.map(b => <p key={b.id} className="text-amber-400 font-bold">🎂 Niver: {b.name}</p>)}
-                      {trans.map(t => <p key={t.id} className="truncate">• {t.description}</p>)}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 hidden group-hover:block bg-slate-900 text-white text-[10px] p-3 rounded-xl shadow-2xl z-20 pointer-events-none border border-white/10">
+                      {holiday && <p className="font-bold text-rose-400 mb-1 flex items-center gap-1">🚩 {holiday}</p>}
+                      {births.map(b => <p key={b.id} className="text-amber-400 font-bold mb-1 flex items-center gap-1">🎂 Niver: {b.name}</p>)}
+                      {trans.map(t => (
+                        <p key={t.id} className="truncate flex items-center gap-1">
+                          <span className={t.type === TransactionType.PAYABLE ? 'text-rose-400' : 'text-emerald-400'}>•</span> 
+                          {t.description} (R$ {t.amount.toLocaleString('pt-BR')})
+                        </p>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -147,19 +164,21 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
             })}
           </div>
           <div className="mt-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase text-slate-400">
-             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /> Pagar</div>
-             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Receber</div>
-             <div className="flex items-center gap-1"><Cake size={12} className="text-amber-500" /> Aniversário</div>
+             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Pagar</div>
+             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Receber</div>
+             <div className="flex items-center gap-1.5"><Cake size={14} className="text-amber-500" /> Aniversário</div>
           </div>
         </div>
 
         <div className="lg:col-span-2 p-6 bg-slate-50/50">
            <h4 className="font-bold text-slate-800 mb-6 uppercase text-sm tracking-widest flex items-center gap-2">
-             <Cake size={16} className="text-brand-600" /> Aniversariantes do Mês
+             <Cake size={16} className="text-brand-600" /> Destaques do Mês
            </h4>
-           <div className="space-y-3 overflow-y-auto max-h-[300px] custom-scrollbar pr-2">
-             {birthdays.filter(b => b.date.includes('-01-')).length > 0 ? (
-                birthdays.filter(b => b.date.includes('-01-')).sort((a,b) => a.date.localeCompare(b.date)).map(b => (
+           <div className="space-y-3 overflow-y-auto max-h-[350px] custom-scrollbar pr-2">
+             {birthdays.filter(b => b.date.includes(`-${(currentMonth + 1).toString().padStart(2, '0')}-`)).length > 0 ? (
+                birthdays.filter(b => b.date.includes(`-${(currentMonth + 1).toString().padStart(2, '0')}-`))
+                  .sort((a,b) => a.date.localeCompare(b.date))
+                  .map(b => (
                   <div key={b.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm group">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><Cake size={14} /></div>
@@ -175,7 +194,7 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
                 ))
              ) : (
                <div className="py-10 text-center">
-                 <p className="text-slate-400 text-xs italic">Nenhum aniversariante em Janeiro.</p>
+                 <p className="text-slate-400 text-xs italic">Nenhum destaque para {MONTH_NAMES[currentMonth]}.</p>
                </div>
              )}
            </div>
