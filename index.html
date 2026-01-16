@@ -23,19 +23,43 @@
             height: 100vh;
             background: #0f172a;
             color: white;
-            font-weight: bold;
-            font-size: 1.2rem;
-            letter-spacing: 0.1em;
+            flex-direction: column;
+            gap: 1rem;
         }
         #root:empty::after {
             content: "CARREGANDO SEM NEURA...";
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: 0.1em;
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+        .error-box {
+            background: #450a0a;
+            color: #fecaca;
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid #7f1d1d;
+            max-width: 90%;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
     </style>
+    <script>
+        // Define process.env para evitar erros no navegador
+        window.process = { env: { API_KEY: "" } };
+        
+        // Captura erros de carregamento para ajudar no debug
+        window.onerror = function(msg, url, line) {
+            const root = document.getElementById('root');
+            if (root && root.innerHTML === "") {
+                root.innerHTML = `<div class="error-box"><b>Erro de Carregamento:</b><br>${msg}<br><br><small>URL: ${url} | Linha: ${line}</small></div>`;
+            }
+        };
+    </script>
 <script type="importmap">
 {
   "imports": {
@@ -50,7 +74,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- Script de entrada vital para o funcionamento do app -->
     <script type="module" src="./index.tsx"></script>
 </body>
 </html>

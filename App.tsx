@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Transaction, TransactionType, Reminder, ExtendedStatus } from './types';
-import { FinanceCard } from './components/FinanceCard';
-import { ReminderSection } from './components/ReminderSection';
-import { GoogleCalendarIntegration } from './components/GoogleCalendarIntegration';
-import { AnnualCalendar2026 } from './components/AnnualCalendar2026';
-import { SettingsView } from './components/SettingsView';
-import { Sidebar } from './components/Sidebar';
-import { ShareModal } from './components/ShareModal';
-import { ProfileModal } from './components/ProfileModal';
-import { getFinancialHealthAnalysis } from './services/gemini';
-import { syncTransactionWithSheets } from './services/googleSheets';
-import { exportTransactionsToCSV } from './utils/export';
+import { Transaction, TransactionType, Reminder, ExtendedStatus } from './types.ts';
+import { FinanceCard } from './components/FinanceCard.tsx';
+import { ReminderSection } from './components/ReminderSection.tsx';
+import { GoogleCalendarIntegration } from './components/GoogleCalendarIntegration.tsx';
+import { AnnualCalendar2026 } from './components/AnnualCalendar2026.tsx';
+import { SettingsView } from './components/SettingsView.tsx';
+import { Sidebar } from './components/Sidebar.tsx';
+import { ShareModal } from './components/ShareModal.tsx';
+import { ProfileModal } from './components/ProfileModal.tsx';
+import { getFinancialHealthAnalysis } from './services/gemini.ts';
+import { syncTransactionWithSheets } from './services/googleSheets.ts';
+import { exportTransactionsToCSV } from './utils/export.ts';
 import { BrainCircuit, Menu, X, CloudCheck, LayoutDashboard, Calendar, Download, Settings, Share2, Users } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -51,15 +51,6 @@ const App: React.FC = () => {
     }
     if (savedActive) {
       setCurrentProfile(savedActive);
-    } else {
-      // Migração de dados legados (v3 anterior) para o perfil Padrão
-      const legacyTrans = localStorage.getItem('sn_transactions_v3');
-      const legacyRemind = localStorage.getItem('sn_reminders_v3');
-      const legacyUrl = localStorage.getItem('sn_script_url');
-      
-      if (legacyTrans) localStorage.setItem(`sn_Padrão_transactions_v3`, legacyTrans);
-      if (legacyRemind) localStorage.setItem(`sn_Padrão_reminders_v3`, legacyRemind);
-      if (legacyUrl) localStorage.setItem(`sn_Padrão_script_url`, legacyUrl);
     }
   }, []);
 
@@ -99,10 +90,6 @@ const App: React.FC = () => {
     if (currentProfile === name) {
       setCurrentProfile('Padrão');
     }
-    // Limpar localStorage do perfil deletado
-    localStorage.removeItem(`sn_${name}_transactions_v3`);
-    localStorage.removeItem(`sn_${name}_reminders_v3`);
-    localStorage.removeItem(`sn_${name}_script_url`);
   };
 
   const handleAddTransaction = async (item: Partial<Transaction>) => {
@@ -242,12 +229,6 @@ const App: React.FC = () => {
                     >
                       <Share2 size={18} /> Compartilhar
                     </button>
-                    <button 
-                      onClick={() => setIsProfileModalOpen(true)}
-                      className="lg:hidden flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all shadow-sm"
-                    >
-                      <Users size={18} /> Perfis
-                    </button>
                   </div>
               </div>
               
@@ -334,7 +315,6 @@ const App: React.FC = () => {
               <button onClick={() => {setView('annual'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-700"><Calendar size={18}/> Calendário 2026</button>
               <button onClick={() => {setView('settings'); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-700"><Settings size={18}/> Configurações</button>
               <button onClick={() => {setIsProfileModalOpen(true); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-slate-900"><Users size={18}/> Trocar Perfil</button>
-              <button onClick={() => {setIsShareModalOpen(true); setIsMobileMenuOpen(false)}} className="w-full text-left py-2 px-4 font-bold flex items-center gap-2 text-blue-600"><Share2 size={18}/> Compartilhar Link</button>
             </div>
           )}
         </nav>
@@ -346,9 +326,6 @@ const App: React.FC = () => {
         <footer className="p-10 border-t border-slate-200 mt-auto bg-white">
            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-sm">
               <p>&copy; 2026 SEM NEURA - Gestão de {currentProfile}</p>
-              <div className="flex items-center gap-1">
-                 Sincronização Nuvem: <span className={scriptUrl ? "text-emerald-500 font-bold" : "text-slate-300"}>{scriptUrl ? "ATIVADA" : "DESATIVADA"}</span>
-              </div>
            </div>
         </footer>
       </div>
