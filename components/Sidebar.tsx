@@ -2,8 +2,6 @@
 import React, { useRef } from 'react';
 import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check, FileJson, UploadCloud, FileSpreadsheet, LogIn, LogOut, User as UserIcon, Thermometer } from 'lucide-react';
 import { ThemeType, Transaction } from '../types';
-import { exportFullBackupJSON, importFullBackupJSON } from '../utils/backup';
-import { importTransactionsFromCSV } from '../utils/export';
 import { loginWithGoogle, logout } from '../services/firebase';
 import { User } from 'firebase/auth';
 
@@ -32,19 +30,13 @@ const THEME_OPTIONS: { id: ThemeType; color: string; label: string }[] = [
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeView, 
   onViewChange, 
-  onExport, 
-  onShare, 
   onOpenProfiles,
-  onImportTransactions,
   isSyncActive, 
   currentProfile,
   currentTheme,
   onThemeChange,
   currentUser
 }) => {
-  const jsonFileInputRef = useRef<HTMLInputElement>(null);
-  const csvFileInputRef = useRef<HTMLInputElement>(null);
-
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'analysis', label: 'Análise Financeira', icon: Thermometer },
@@ -53,38 +45,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'receber', label: 'Contas a Receber', icon: TrendingUp },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ] as const;
-
-  const handleJsonImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const ok = await importFullBackupJSON(file);
-      if (ok) {
-        alert("Backup JSON restaurado com sucesso! A página será recarregada.");
-        window.location.reload();
-      } else {
-        alert("Erro ao restaurar o backup JSON. Verifique o arquivo.");
-      }
-    }
-  };
-
-  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const transactions = await importTransactionsFromCSV(file);
-        if (transactions.length > 0) {
-          onImportTransactions(transactions);
-          alert(`${transactions.length} transações importadas com sucesso!`);
-        } else {
-          alert("Nenhuma transação válida encontrada no CSV.");
-        }
-      } catch (err) {
-        alert("Erro ao processar arquivo CSV. Certifique-se de que é um arquivo exportado pelo app.");
-        console.error(err);
-      }
-    }
-    if (csvFileInputRef.current) csvFileInputRef.current.value = '';
-  };
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden lg:flex flex-col h-screen sticky top-0 overflow-y-auto custom-scrollbar border-r border-white/5">
@@ -96,7 +56,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="px-6 mb-8 space-y-4">
-        {/* Firebase Login Section */}
         {!currentUser ? (
           <button 
             onClick={() => loginWithGoogle()}
@@ -177,63 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      <div className="p-4 mt-auto space-y-3">
-        <button 
-          onClick={onShare}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm text-brand-500 hover:bg-white/5"
-        >
-          <Share2 size={18} />
-          Compartilhar
-        </button>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button 
-            onClick={onExport}
-            title="Exportar Transações (CSV)"
-            className="flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-700"
-          >
-            <Download size={14} /> Export CSV
-          </button>
-          <button 
-            onClick={() => csvFileInputRef.current?.click()}
-            title="Importar Transações (CSV)"
-            className="flex flex-col items-center justify-center gap-1 bg-white hover:bg-slate-50 text-slate-900 py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-200"
-          >
-            <FileSpreadsheet size={14} className="text-brand-600" /> Import CSV
-            <input 
-              type="file" 
-              ref={csvFileInputRef} 
-              onChange={handleCsvImport} 
-              accept=".csv" 
-              className="hidden" 
-            />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-           <button 
-            onClick={exportFullBackupJSON}
-            title="Backup Completo (JSON)"
-            className="flex flex-col items-center justify-center gap-1 bg-brand-600/10 hover:bg-brand-600 text-brand-500 hover:text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-brand-500/20"
-          >
-            <FileJson size={14} /> Back JSON
-          </button>
-          <button 
-            onClick={() => jsonFileInputRef.current?.click()}
-            title="Restaurar Backup (JSON)"
-            className="flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-700"
-          >
-            <UploadCloud size={14} /> Rest JSON
-            <input 
-              type="file" 
-              ref={jsonFileInputRef} 
-              onChange={handleJsonImport} 
-              accept=".json" 
-              className="hidden" 
-            />
-          </button>
-        </div>
-        
+      <div className="p-4 mt-auto">
         <div className={`p-4 rounded-2xl border transition-colors ${isSyncActive ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
           <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Sync Ativo</p>
           <div className="flex items-center gap-2">

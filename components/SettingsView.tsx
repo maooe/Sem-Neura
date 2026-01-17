@@ -1,8 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import { Settings, Database, Shield, CheckCircle2, Copy, ExternalLink, HelpCircle, Send, AlertCircle, BrainCircuit, RefreshCcw, XCircle, LayoutDashboard, ArrowLeft, Palette, Check, Globe, Box, Github, Zap, ShieldCheck, Activity } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, Database, Shield, CheckCircle2, Copy, ExternalLink, HelpCircle, Send, AlertCircle, BrainCircuit, RefreshCcw, XCircle, LayoutDashboard, ArrowLeft, Palette, Check, Globe, Box, Download, FileSpreadsheet, FileJson, UploadCloud, Smartphone, Share2, Activity } from 'lucide-react';
 import { syncTransactionWithSheets } from '../services/googleSheets.ts';
-import { TransactionType, ThemeType } from '../types.ts';
+import { ThemeType, Transaction } from '../types.ts';
+import { exportFullBackupJSON, importFullBackupJSON } from '../utils/backup';
+import { exportTransactionsToCSV, importTransactionsFromCSV } from '../utils/export';
 
 interface SettingsViewProps {
   scriptUrl: string;
@@ -10,6 +12,8 @@ interface SettingsViewProps {
   currentTheme: ThemeType;
   onThemeChange: (theme: ThemeType) => void;
   onNavigateToDashboard: () => void;
+  transactions: Transaction[];
+  onImportTransactions: (transactions: Transaction[]) => void;
 }
 
 const THEME_OPTIONS: { id: ThemeType; color: string; label: string; desc: string }[] = [
@@ -20,34 +24,73 @@ const THEME_OPTIONS: { id: ThemeType; color: string; label: string; desc: string
   { id: 'midnight', color: 'bg-slate-700', label: 'Modo Midnight', desc: 'Visual escuro e sóbrio.' },
 ];
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ scriptUrl, onUrlChange, currentTheme, onThemeChange, onNavigateToDashboard }) => {
-  const [copied, setCopied] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
+export const SettingsView: React.FC<SettingsViewProps> = ({ 
+  scriptUrl, 
+  onUrlChange, 
+  currentTheme, 
+  onThemeChange, 
+  onNavigateToDashboard,
+  transactions,
+  onImportTransactions
+}) => {
   const [apiKeyStatus, setApiKeyStatus] = useState<'active' | 'inactive'>('inactive');
+  const [copiedLink, setCopiedLink] = useState(false);
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Checa se a API_KEY está configurada no ambiente
-    if (process.env.API_KEY && process.env.API_KEY.length > 5) {
+    if (typeof process !== 'undefined' && process?.env?.API_KEY && process.env.API_KEY.length > 5) {
+      setApiKeyStatus('active');
+    } else if ((window as any).API_KEY) {
       setApiKeyStatus('active');
     }
   }, []);
 
-  const scriptCode = `function doGet() { ... code ... }`; // Simplificado para brevidade
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(scriptCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyAppUrl = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const handleTestConnection = async () => {
-    if (!scriptUrl) return;
-    setTesting(true);
-    setTestResult(null);
-    const success = await syncTransactionWithSheets(scriptUrl, { description: 'Teste' } as any);
-    setTestResult(success ? 'success' : 'error');
-    setTesting(false);
+  const handleInstallShortcut = () => {
+    // Tenta acionar o menu de compartilhamento/instalação do navegador se disponível
+    if (navigator.share) {
+      navigator.share({
+        title: 'SEM NEURA',
+        text: 'Acesse seu sistema de gestão financeira inteligente.',
+        url: window.location.href,
+      }).catch(() => {
+        alert("Para baixar o atalho: \n1. Toque no ícone de Compartilhar\n2. Selecione 'Adicionar à Tela de Início'");
+      });
+    } else {
+      alert("Para baixar o atalho: \n1. Toque no menu do navegador (três pontos)\n2. Selecione 'Adicionar à Tela de Início'");
+    }
+  };
+
+  const handleJsonImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const ok = await importFullBackupJSON(file);
+      if (ok) {
+        alert("Backup JSON restaurado! Recarregando...");
+        window.location.reload();
+      }
+    }
+  };
+
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const imported = await importTransactionsFromCSV(file);
+        if (imported.length > 0) {
+          onImportTransactions(imported);
+          alert(`${imported.length} transações importadas!`);
+        }
+      } catch (err) {
+        alert("Erro no CSV.");
+      }
+    }
   };
 
   return (
@@ -62,7 +105,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ scriptUrl, onUrlChan
             </button>
             <div>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">Central de Comando</h2>
-              <p className="text-slate-500 font-bold text-sm mt-1">Status do Sistema e Hospedagem</p>
+              <p className="text-slate-500 font-bold text-sm mt-1">Status e Configurações Gerais</p>
             </div>
           </div>
           
@@ -76,89 +119,76 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ scriptUrl, onUrlChan
           </div>
         </header>
 
-        {/* ALERTA DE BLOQUEIO NETLIFY E ALTERNATIVAS */}
-        <section className="bg-rose-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden border-4 border-white">
-           <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
-              <Zap size={200} />
+        {/* GESTÃO DE DADOS */}
+        <section className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl overflow-hidden relative">
+           <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Database size={120} />
            </div>
            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-white text-rose-600 rounded-2xl shadow-xl">
-                  <AlertCircle size={28} />
+              <div className="flex items-center gap-4 mb-8">
+                <div className="p-3 bg-slate-900 text-white rounded-2xl">
+                  <Activity size={28} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black uppercase tracking-tight">Netlify Bloqueado? Não pare!</h3>
-                  <p className="text-rose-100 text-sm font-bold">Seu limite de crédito estourou, mas você pode migrar em 2 minutos.</p>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Gestão de Dados</h3>
+                  <p className="text-slate-500 text-sm font-medium">Backup, Importação e Exportação</p>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 hover:bg-white/20 transition-all group">
-                  <div className="flex items-center justify-between mb-4">
-                    <Github size={24} />
-                    <span className="text-[10px] font-black bg-white/20 px-2 py-1 rounded">100% GRÁTIS</span>
-                  </div>
-                  <h4 className="font-black uppercase text-sm mb-2">GitHub Pages</h4>
-                  <p className="text-[11px] text-rose-50 leading-relaxed mb-4">Ideal para quem já tem o código no GitHub. Sem limites de crédito chatos para sites pequenos.</p>
-                  <button className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 bg-white text-rose-600 px-4 py-2 rounded-full group-hover:scale-105 transition-transform">
-                    Ver Tutorial <ExternalLink size={12} />
-                  </button>
-                </div>
 
-                <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 hover:bg-white/20 transition-all group">
-                  <div className="flex items-center justify-between mb-4">
-                    <Zap size={24} className="text-amber-300" />
-                    <span className="text-[10px] font-black bg-white/20 px-2 py-1 rounded">ALTA PERFORMANCE</span>
-                  </div>
-                  <h4 className="font-black uppercase text-sm mb-2">Vercel</h4>
-                  <p className="text-[11px] text-rose-50 leading-relaxed mb-4">A melhor alternativa ao Netlify. Basta conectar seu GitHub e o deploy é automático e gratuito.</p>
-                  <a href="https://vercel.com" target="_blank" className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 bg-white text-rose-600 px-4 py-2 rounded-full group-hover:scale-105 transition-transform w-fit">
-                    Ir para Vercel <ExternalLink size={12} />
-                  </a>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <button onClick={() => exportTransactionsToCSV(transactions)} className="flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-900 hover:text-white p-6 rounded-3xl border border-slate-200 transition-all group active:scale-95">
+                    <Download className="text-brand-600 group-hover:text-white" size={24} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Exportar CSV</span>
+                 </button>
+                 <button onClick={() => csvFileInputRef.current?.click()} className="flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-900 hover:text-white p-6 rounded-3xl border border-slate-200 transition-all group active:scale-95">
+                    <FileSpreadsheet className="text-brand-600 group-hover:text-white" size={24} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Importar CSV</span>
+                    <input type="file" ref={csvFileInputRef} onChange={handleCsvImport} accept=".csv" className="hidden" />
+                 </button>
+                 <button onClick={exportFullBackupJSON} className="flex flex-col items-center justify-center gap-3 bg-brand-50 hover:bg-brand-600 hover:text-white p-6 rounded-3xl border border-brand-100 transition-all group active:scale-95">
+                    <FileJson className="text-brand-600 group-hover:text-white" size={24} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Backup JSON</span>
+                 </button>
+                 <button onClick={() => jsonFileInputRef.current?.click()} className="flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-900 hover:text-white p-6 rounded-3xl border border-slate-200 transition-all group active:scale-95">
+                    <UploadCloud className="text-brand-600 group-hover:text-white" size={24} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Restaurar JSON</span>
+                    <input type="file" ref={jsonFileInputRef} onChange={handleJsonImport} accept=".json" className="hidden" />
+                 </button>
               </div>
            </div>
         </section>
 
-        {/* DIAGNÓSTICO DE SAÚDE DO APP */}
-        <section className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl">
-          <div className="flex items-center gap-4 mb-10">
-            <div className="p-3 bg-slate-100 text-slate-900 rounded-2xl">
-              <Activity size={28} />
-            </div>
-            <div>
-              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Saúde da Aplicação</h3>
-              <p className="text-slate-500 text-sm font-medium">Verificação de módulos e chaves</p>
-            </div>
-          </div>
+        {/* ATALHO APP E COMPARTILHAMENTO */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+           <div className="bg-brand-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                 <Smartphone size={100} />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-xl font-black uppercase tracking-tight mb-2">Acesso Rápido Mobile</h3>
+                <p className="text-brand-100 text-sm font-medium mb-8">Baixe o atalho do SEM NEURA diretamente para sua tela inicial.</p>
+                <button 
+                  onClick={handleInstallShortcut}
+                  className="flex items-center gap-3 bg-white text-brand-600 px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
+                >
+                  <Smartphone size={18} /> Baixar Atalho Mobile
+                </button>
+              </div>
+           </div>
 
-          <div className="space-y-4">
-             <div className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <BrainCircuit className={apiKeyStatus === 'active' ? 'text-emerald-500' : 'text-slate-300'} />
-                  <div>
-                    <p className="text-sm font-black uppercase text-slate-700">Inteligência Artificial (Gemini)</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{apiKeyStatus === 'active' ? 'Chave detectada e ativa' : 'Chave não configurada no servidor'}</p>
-                  </div>
-                </div>
-                <div className={`px-3 py-1 rounded-full text-[9px] font-black ${apiKeyStatus === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                  {apiKeyStatus === 'active' ? 'OPERACIONAL' : 'DESATIVADO'}
-                </div>
-             </div>
-
-             <div className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <Database className={scriptUrl ? 'text-emerald-500' : 'text-slate-300'} />
-                  <div>
-                    <p className="text-sm font-black uppercase text-slate-700">Backup em Nuvem (Google Sheets)</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{scriptUrl ? 'Link configurado' : 'Aguardando URL do script'}</p>
-                  </div>
-                </div>
-                <div className={`px-3 py-1 rounded-full text-[9px] font-black ${scriptUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                  {scriptUrl ? 'CONECTADO' : 'MODO LOCAL'}
-                </div>
-             </div>
-          </div>
+           <div className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl relative overflow-hidden">
+              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Compartilhamento</h3>
+              <p className="text-slate-500 text-sm font-medium mb-8">Compartilhe o acesso ao seu painel (Apenas Leitura Local).</p>
+              <div className="flex gap-4">
+                 <button 
+                   onClick={handleCopyAppUrl}
+                   className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all ${copiedLink ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                 >
+                   {copiedLink ? <Check size={18} /> : <Share2 size={18} />}
+                   {copiedLink ? 'Link Copiado' : 'Copiar Link'}
+                 </button>
+              </div>
+           </div>
         </section>
 
         {/* TEMAS */}

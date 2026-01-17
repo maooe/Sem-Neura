@@ -208,7 +208,17 @@ const App: React.FC = () => {
   const renderMainContent = () => {
     switch (view) {
       case 'settings':
-        return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} currentTheme={theme} onThemeChange={setTheme} onNavigateToDashboard={() => setView('dashboard')} />;
+        return (
+          <SettingsView 
+            scriptUrl={scriptUrl} 
+            onUrlChange={setScriptUrl} 
+            currentTheme={theme} 
+            onThemeChange={setTheme} 
+            onNavigateToDashboard={() => setView('dashboard')} 
+            transactions={transactions}
+            onImportTransactions={handleImportTransactions}
+          />
+        );
       case 'annual':
         return <AnnualCalendar2026 birthdays={birthdays} transactions={transactions} reminders={reminders} />;
       case 'pagar':
@@ -342,7 +352,6 @@ const App: React.FC = () => {
         </>
       )}
 
-      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} transactions={transactions} isSyncActive={!!scriptUrl || !!user} />
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} profiles={profiles} currentProfile={currentProfile} onSelectProfile={setCurrentProfile} onCreateProfile={(name) => { setProfiles([...profiles, name]); setCurrentProfile(name); setIsProfileModalOpen(false); }} onDeleteProfile={(name) => { setProfiles(profiles.filter(p => p !== name)); if(currentProfile === name) setCurrentProfile('Padrão'); }} />
     </div>
   );

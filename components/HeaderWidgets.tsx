@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Newspaper, Zap, ExternalLink, Radio } from 'lucide-react';
+import { Clock, MapPin, Newspaper, Zap, ExternalLink, Radio, RefreshCcw } from 'lucide-react';
 import { getDynamicNewsFeed, STATIC_NEWS_FALLBACK } from '../services/gemini';
 
 export const HeaderWidgets: React.FC = () => {
   const [time, setTime] = useState(new Date());
   const [location, setLocation] = useState<string>('Juiz de Fora, MG');
-  // Inicializamos com o fallback para nunca ficar vazio
   const [news, setNews] = useState<{topic: string, headline: string}[]>(STATIC_NEWS_FALLBACK);
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export const HeaderWidgets: React.FC = () => {
 
     const fetchNews = async () => {
       try {
-        // Tenta buscar notícias frescas da IA em background
         const data = await getDynamicNewsFeed();
         if (data && data.length > 0) {
           setNews(data);
@@ -37,14 +35,27 @@ export const HeaderWidgets: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   const handleNewsClick = (headline: string) => {
     const query = encodeURIComponent(headline);
     window.open(`https://www.google.com/search?q=${query}`, '_blank');
   };
 
   return (
-    <div className="w-full bg-white border-b border-slate-100 px-6 py-3 flex flex-col md:flex-row items-center gap-4 lg:gap-8 overflow-hidden sticky top-0 z-[40] backdrop-blur-md bg-white/80">
+    <div className="w-full bg-white border-b border-slate-100 px-4 md:px-6 py-3 flex flex-col md:flex-row items-center gap-4 lg:gap-8 overflow-hidden sticky top-0 z-[40] backdrop-blur-md bg-white/80">
       
+      {/* Versão e Refresh */}
+      <button 
+        onClick={handleRefresh}
+        className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-brand-600 transition-all active:scale-95 group shadow-lg"
+      >
+        <RefreshCcw size={12} className="group-hover:rotate-180 transition-transform duration-500" />
+        <span className="text-[10px] font-black tracking-widest uppercase">v01/2026</span>
+      </button>
+
       <div className="flex items-center gap-4 bg-slate-100/50 px-4 py-2 rounded-2xl border border-slate-200/50">
         <div className="flex flex-col items-end border-r border-slate-200 pr-4">
           <span className="text-lg font-black text-slate-900 leading-none">
@@ -92,7 +103,6 @@ export const HeaderWidgets: React.FC = () => {
                 <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
               </div>
             ))}
-            {/* Duplicata para o loop do marquee */}
             {news.map((item, i) => (
               <div 
                 key={`dup-${i}`} 
