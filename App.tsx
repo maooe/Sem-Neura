@@ -126,6 +126,16 @@ const App: React.FC = () => {
     setBirthdays(prev => prev.filter(b => b.id !== id));
   };
 
+  const handleImportTransactions = (imported: Transaction[]) => {
+    setTransactions(prev => {
+      // Mesclar dados: substitui se o ID for igual, senão adiciona
+      const mergedMap = new Map<string, Transaction>();
+      prev.forEach(t => mergedMap.set(t.id, t));
+      imported.forEach(t => mergedMap.set(t.id, t));
+      return Array.from(mergedMap.values());
+    });
+  };
+
   const handleAddTransaction = async (item: Partial<Transaction>) => {
     const newTrans: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
@@ -233,7 +243,7 @@ const App: React.FC = () => {
         <>
           <HeaderWidgets />
           <div className="flex-1 flex">
-            <Sidebar activeView={view} onViewChange={setView} onExport={() => exportTransactionsToCSV(transactions)} onShare={() => setIsShareModalOpen(true)} onOpenProfiles={() => setIsProfileModalOpen(true)} isSyncActive={!!scriptUrl} currentProfile={currentProfile} currentTheme={theme} onThemeChange={setTheme} />
+            <Sidebar activeView={view} onViewChange={setView} onExport={() => exportTransactionsToCSV(transactions)} onImportTransactions={handleImportTransactions} onShare={() => setIsShareModalOpen(true)} onOpenProfiles={() => setIsProfileModalOpen(true)} isSyncActive={!!scriptUrl} currentProfile={currentProfile} currentTheme={theme} onThemeChange={setTheme} />
             <div className="flex-1 flex flex-col min-w-0">
               <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 lg:hidden">
                 <div className="px-4 h-16 flex items-center justify-between">

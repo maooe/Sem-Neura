@@ -1,8 +1,9 @@
 
 import React, { useRef } from 'react';
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check, FileJson, UploadCloud } from 'lucide-react';
-import { ThemeType } from '../types';
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check, FileJson, UploadCloud, FileSpreadsheet } from 'lucide-react';
+import { ThemeType, Transaction } from '../types';
 import { exportFullBackupJSON, importFullBackupJSON } from '../utils/backup';
+import { importTransactionsFromCSV } from '../utils/export';
 
 interface SidebarProps {
   activeView: 'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings';
@@ -10,6 +11,7 @@ interface SidebarProps {
   onExport: () => void;
   onShare: () => void;
   onOpenProfiles: () => void;
+  onImportTransactions: (transactions: Transaction[]) => void;
   isSyncActive: boolean;
   currentProfile: string;
   currentTheme: ThemeType;
@@ -30,12 +32,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onExport, 
   onShare, 
   onOpenProfiles,
+  onImportTransactions,
   isSyncActive, 
   currentProfile,
   currentTheme,
   onThemeChange
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -45,17 +49,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings', label: 'Configurações', icon: Settings },
   ] as const;
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleJsonImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const ok = await importFullBackupJSON(file);
       if (ok) {
-        alert("Backup restaurado com sucesso! A página será recarregada.");
+        alert("Backup JSON restaurado com sucesso! A página será recarregada.");
         window.location.reload();
       } else {
-        alert("Erro ao restaurar o backup. Verifique o arquivo.");
+        alert("Erro ao restaurar o backup JSON. Verifique o arquivo.");
       }
     }
+  };
+
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const transactions = await importTransactionsFromCSV(file);
+        if (transactions.length > 0) {
+          onImportTransactions(transactions);
+          alert(`${transactions.length} transações importadas com sucesso!`);
+        } else {
+          alert("Nenhuma transação válida encontrada no CSV.");
+        }
+      } catch (err) {
+        alert("Erro ao processar arquivo CSV. Certifique-se de que é um arquivo exportado pelo app.");
+        console.error(err);
+      }
+    }
+    // Limpa o input para permitir subir o mesmo arquivo novamente
+    if (csvFileInputRef.current) csvFileInputRef.current.value = '';
   };
 
   return (
@@ -67,7 +91,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <span className="text-xl font-black text-white tracking-tighter uppercase">Sem Neura</span>
       </div>
 
-      {/* Perfil Selector */}
       <div className="px-6 mb-8">
         <button 
           onClick={onOpenProfiles}
@@ -137,30 +160,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title="Exportar Transações (CSV)"
             className="flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-700"
           >
-            <Download size={14} /> CSV
+            <Download size={14} /> Export CSV
           </button>
           <button 
+            onClick={() => csvFileInputRef.current?.click()}
+            title="Importar Transações (CSV)"
+            className="flex flex-col items-center justify-center gap-1 bg-white hover:bg-slate-50 text-slate-900 py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-200"
+          >
+            <FileSpreadsheet size={14} className="text-brand-600" /> Import CSV
+            <input 
+              type="file" 
+              ref={csvFileInputRef} 
+              onChange={handleCsvImport} 
+              accept=".csv" 
+              className="hidden" 
+            />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+           <button 
             onClick={exportFullBackupJSON}
             title="Backup Completo (JSON)"
             className="flex flex-col items-center justify-center gap-1 bg-brand-600/10 hover:bg-brand-600 text-brand-500 hover:text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-brand-500/20"
           >
-            <FileJson size={14} /> Backup
+            <FileJson size={14} /> Back JSON
+          </button>
+          <button 
+            onClick={() => jsonFileInputRef.current?.click()}
+            title="Restaurar Backup (JSON)"
+            className="flex flex-col items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white py-3 rounded-xl transition-all text-[9px] font-black uppercase border border-slate-700"
+          >
+            <UploadCloud size={14} /> Rest JSON
+            <input 
+              type="file" 
+              ref={jsonFileInputRef} 
+              onChange={handleJsonImport} 
+              accept=".json" 
+              className="hidden" 
+            />
           </button>
         </div>
-
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white py-3 rounded-xl transition-all text-[10px] font-black uppercase border border-slate-700"
-        >
-          <UploadCloud size={16} /> Restaurar JSON
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImport} 
-            accept=".json" 
-            className="hidden" 
-          />
-        </button>
         
         <div className={`p-4 rounded-2xl border transition-colors ${isSyncActive ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
           <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Cloud Sync</p>
