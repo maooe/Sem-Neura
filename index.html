@@ -67,8 +67,7 @@
     </style>
 
     <script>
-        window.process = { env: { API_KEY: "" } };
-        
+        // Não sobrescrevemos a API_KEY aqui para permitir que o Vercel/Netlify injete via process.env
         tailwind.config = {
             theme: {
                 extend: {

@@ -2,42 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, Reminder } from "../types";
 
-export const getFinancialHealthAnalysis = async (
-  transactions: Transaction[],
-  reminders: Reminder[],
-  isCloudSynced: boolean = false
-) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const prompt = `
-    Analise os seguintes dados financeiros e lembretes do usuário do app "SEM NEURA":
-    
-    Transações: ${JSON.stringify(transactions)}
-    Lembretes: ${JSON.stringify(reminders)}
-    Status de Backup: ${isCloudSynced ? "CONECTADO AO GOOGLE SHEETS (Seguro)" : "APENAS LOCAL (Sem Backup)"}
-    
-    Por favor, forneça um resumo rápido da saúde financeira (saldo projetado), destaque urgências e dê uma dica motivacional curta para uma vida "Sem Neura". 
-    Se o backup estiver ativo, parabenize pela organização profissional. Se não, sugira suavemente conectar para mais segurança.
-    Responda em Português do Brasil de forma amigável e direta.
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        temperature: 0.7,
-      }
-    });
-    return response.text;
-  } catch (error) {
-    console.error("Erro ao consultar Gemini:", error);
-    return "Não foi possível analisar seus dados agora, mas mantenha a calma!";
-  }
-};
-
 const STATIC_NEWS_FALLBACK = [
-  { topic: "IA", headline: "Novos modelos Gemini 3 atingem raciocínio de nível humano em testes de lógica." },
+  { topic: "MODO OFFLINE", headline: "Bem-vindo ao Sem Neura! Configure sua API_KEY para notícias em tempo real." },
   { topic: "ECONOMIA", headline: "Mercado prevê estabilidade na taxa Selic para o próximo trimestre." },
   { topic: "TECNOLOGIA", headline: "Brasil se torna hub de desenvolvimento para startups de Inteligência Artificial." },
   { topic: "JF", headline: "Juiz de Fora registra crescimento de 15% em novos negócios digitais." },
@@ -49,20 +15,57 @@ const STATIC_NEWS_FALLBACK = [
   { topic: "IA", headline: "Como pequenos empreendedores estão usando IA para dobrar produtividade." }
 ];
 
+const getApiKey = () => {
+  // Tenta pegar de várias fontes possíveis em ambientes de deploy
+  return process.env.API_KEY || (window as any).process?.env?.API_KEY || "";
+};
+
+export const getFinancialHealthAnalysis = async (
+  transactions: Transaction[],
+  reminders: Reminder[],
+  isCloudSynced: boolean = false
+) => {
+  const apiKey = getApiKey();
+  if (!apiKey) return "Modo Offline: Configure sua chave Gemini nas configurações para análises inteligentes.";
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const prompt = `
+    Analise os seguintes dados financeiros e lembretes do usuário do app "SEM NEURA":
+    Transações: ${JSON.stringify(transactions)}
+    Lembretes: ${JSON.stringify(reminders)}
+    Status de Backup: ${isCloudSynced ? "CONECTADO AO GOOGLE SHEETS" : "APENAS LOCAL"}
+    Forneça um resumo rápido da saúde financeira e uma dica motivacional curta em PT-BR.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: { temperature: 0.7 }
+    });
+    return response.text;
+  } catch (error) {
+    return "Não foi possível analisar seus dados agora. Foque na organização!";
+  }
+};
+
 export const getDynamicNewsFeed = async () => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+  
+  // Se não tem chave, nem tenta a API para não travar o carregamento
+  if (!apiKey || apiKey === "") {
+    return [...STATIC_NEWS_FALLBACK].sort(() => Math.random() - 0.5);
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
-    // Se não houver API KEY, cai direto no catch
-    if (!process.env.API_KEY || process.env.API_KEY === "") {
-      throw new Error("No API Key");
-    }
-
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: "Gere 8 manchetes curtas e impactantes para um feed de notícias. Tópicos: Juiz de Fora (MG), Economia Brasileira, Avanços de IA, e Tecnologia. Retorne em PT-BR.",
       config: {
-        systemInstruction: "Você é um editor de notícias. Retorne as manchetes em um array JSON. Seja imparcial e direto.",
+        systemInstruction: "Você é um editor de notícias. Retorne as manchetes em um array JSON.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -79,43 +82,37 @@ export const getDynamicNewsFeed = async () => {
     });
     return JSON.parse(response.text || "[]");
   } catch (error) {
-    // Retorna a lista estática embaralhada para parecer dinâmica
+    console.error("Gemini News Error:", error);
     return [...STATIC_NEWS_FALLBACK].sort(() => Math.random() - 0.5);
   }
 };
 
 export const processNaturalLanguageReminder = async (input: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+  if (!apiKey) return { text: input, priority: "MEDIUM" as const };
+
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Transforme esta frase em um lembrete estruturado: "${input}"`,
       config: {
-        systemInstruction: "Você é um assistente do app 'Sem Neura'. Extraia a tarefa principal e determine a prioridade (HIGH, MEDIUM, LOW) baseada em palavras-chave como 'urgente', 'importante', 'depois', etc. Se não houver data específica mencionada, apenas extraia o texto da tarefa.",
+        systemInstruction: "Extraia a tarefa e prioridade (HIGH, MEDIUM, LOW).",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            text: {
-              type: Type.STRING,
-              description: "O texto limpo do lembrete, sem o prefixo 'me lembre de' ou similares."
-            },
-            priority: {
-              type: Type.STRING,
-              enum: ["LOW", "MEDIUM", "HIGH"],
-              description: "Prioridade calculada da tarefa."
-            }
+            text: { type: Type.STRING },
+            priority: { type: Type.STRING, enum: ["LOW", "MEDIUM", "HIGH"] }
           },
           required: ["text", "priority"]
         }
       }
     });
 
-    const result = JSON.parse(response.text || "{}");
-    return result as { text: string; priority: Reminder['priority'] };
+    return JSON.parse(response.text || "{}");
   } catch (error) {
-    console.error("Erro ao processar lembrete com IA:", error);
     return { text: input, priority: "MEDIUM" as const };
   }
 };

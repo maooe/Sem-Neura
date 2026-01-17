@@ -5,7 +5,7 @@ import { getDynamicNewsFeed } from '../services/gemini';
 
 export const HeaderWidgets: React.FC = () => {
   const [time, setTime] = useState(new Date());
-  const [location, setLocation] = useState<string>('Buscando local...');
+  const [location, setLocation] = useState<string>('Juiz de Fora, MG');
   const [news, setNews] = useState<{topic: string, headline: string}[]>([]);
 
   useEffect(() => {
@@ -13,19 +13,33 @@ export const HeaderWidgets: React.FC = () => {
     
     // Geolocation
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        try {
-          // Em um app real, faríamos reverse geocoding aqui
-          setLocation('Juiz de Fora, MG');
-        } catch (e) { setLocation('Localização Ativa'); }
-      }, () => setLocation('Brasil'));
+      navigator.geolocation.getCurrentPosition(() => setLocation('Juiz de Fora, MG'), () => setLocation('Brasil'));
     }
 
-    // News
+    // News com Timeout de Segurança
     const fetchNews = async () => {
-      const data = await getDynamicNewsFeed();
-      setNews(data);
+      try {
+        // Criamos uma promessa que rejeita após 5 segundos
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
+
+        // Corrida entre a API e o cronômetro de 5s
+        const data = await Promise.race([
+          getDynamicNewsFeed(),
+          timeout
+        ]) as {topic: string, headline: string}[];
+
+        setNews(data);
+      } catch (e) {
+        console.warn("Usando fallback de notícias devido a demora ou erro.");
+        // Se der erro ou demorar demais, o getDynamicNewsFeed original já tem fallback, 
+        // mas aqui forçamos a exibição se algo travar no meio.
+        const fallback = await getDynamicNewsFeed(); 
+        setNews(fallback);
+      }
     };
+    
     fetchNews();
 
     return () => clearInterval(timer);
@@ -88,10 +102,8 @@ export const HeaderWidgets: React.FC = () => {
                   <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
                   <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
                   <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
-                  <Zap size={10} className="text-amber-500" />
                 </div>
               ))}
-              {/* Duplicamos para garantir o loop infinito suave */}
               {news.map((item, i) => (
                 <div 
                   key={`dup-${i}`} 
@@ -101,7 +113,6 @@ export const HeaderWidgets: React.FC = () => {
                   <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
                   <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
                   <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
-                  <Zap size={10} className="text-amber-500" />
                 </div>
               ))}
             </div>
@@ -119,7 +130,7 @@ export const HeaderWidgets: React.FC = () => {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 30s linear infinite;
+          animation: marquee 35s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
