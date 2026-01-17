@@ -17,6 +17,7 @@ import { FinancialSummary } from './components/FinancialSummary.tsx';
 import { AccountHistory } from './components/AccountHistory.tsx';
 import { MonthlyPerformanceGrid } from './components/MonthlyPerformanceGrid.tsx';
 import { InsightsBanner } from './components/InsightsBanner.tsx';
+import { MobileBottomNav } from './components/MobileBottomNav.tsx';
 import { getFinancialHealthAnalysis } from './services/gemini.ts';
 import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
@@ -210,6 +211,18 @@ const App: React.FC = () => {
         return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} currentTheme={theme} onThemeChange={setTheme} onNavigateToDashboard={() => setView('dashboard')} />;
       case 'annual':
         return <AnnualCalendar2026 birthdays={birthdays} />;
+      case 'pagar':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+             <FinanceCard title="CONTAS A PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl || !!user} />
+          </div>
+        );
+      case 'receber':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+             <FinanceCard title="CONTAS A RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl || !!user} />
+          </div>
+        );
       case 'analysis':
         return (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
@@ -218,7 +231,7 @@ const App: React.FC = () => {
                    <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter uppercase">Relatório de <span className="text-brand-600">Performance</span></h1>
                    <p className="text-slate-500 font-bold text-sm mt-1">Cruzamento de dados e histórico de calor do caixa</p>
                 </div>
-                <button onClick={() => setView('dashboard')} className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase hover:border-brand-500 transition-all shadow-sm">
+                <button onClick={() => setView('dashboard')} className="hidden lg:flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase hover:border-brand-500 transition-all shadow-sm">
                    <LayoutDashboard size={18} /> Voltar ao Painel
                 </button>
              </header>
@@ -320,9 +333,12 @@ const App: React.FC = () => {
                   <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
                 </div>
               </nav>
-              <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto">{renderMainContent()}</main>
+              <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto pb-24 lg:pb-10">
+                {renderMainContent()}
+              </main>
             </div>
           </div>
+          <MobileBottomNav activeView={view} onViewChange={(v) => setView(v as ViewType)} />
         </>
       )}
 

@@ -11,30 +11,17 @@ export const HeaderWidgets: React.FC = () => {
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     
-    // Geolocation
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(() => setLocation('Juiz de Fora, MG'), () => setLocation('Brasil'));
     }
 
-    // News com Timeout de Segurança
     const fetchNews = async () => {
+      // Começamos tentando buscar as notícias. 
+      // Se a gemini.ts não encontrar API_KEY, ela já retorna o fallback instantaneamente.
       try {
-        // Criamos uma promessa que rejeita após 5 segundos
-        const timeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 5000)
-        );
-
-        // Corrida entre a API e o cronômetro de 5s
-        const data = await Promise.race([
-          getDynamicNewsFeed(),
-          timeout
-        ]) as {topic: string, headline: string}[];
-
+        const data = await getDynamicNewsFeed();
         setNews(data);
       } catch (e) {
-        console.warn("Usando fallback de notícias devido a demora ou erro.");
-        // Se der erro ou demorar demais, o getDynamicNewsFeed original já tem fallback, 
-        // mas aqui forçamos a exibição se algo travar no meio.
         const fallback = await getDynamicNewsFeed(); 
         setNews(fallback);
       }
@@ -53,7 +40,6 @@ export const HeaderWidgets: React.FC = () => {
   return (
     <div className="w-full bg-white border-b border-slate-100 px-6 py-3 flex flex-col md:flex-row items-center gap-4 lg:gap-8 overflow-hidden sticky top-0 z-[40] backdrop-blur-md bg-white/80">
       
-      {/* Clock & Date */}
       <div className="flex items-center gap-4 bg-slate-100/50 px-4 py-2 rounded-2xl border border-slate-200/50">
         <div className="flex flex-col items-end border-r border-slate-200 pr-4">
           <span className="text-lg font-black text-slate-900 leading-none">
@@ -73,13 +59,11 @@ export const HeaderWidgets: React.FC = () => {
         </div>
       </div>
 
-      {/* Location */}
       <div className="hidden lg:flex items-center gap-2 text-slate-500">
         <MapPin size={16} className="text-rose-500" />
         <span className="text-[11px] font-black uppercase tracking-widest whitespace-nowrap">{location}</span>
       </div>
 
-      {/* News Ticker */}
       <div className="flex-1 w-full bg-slate-900 text-white rounded-2xl p-2.5 flex items-center gap-4 overflow-hidden shadow-lg shadow-slate-200">
         <div className="flex-shrink-0 bg-brand-600 px-3 py-1 rounded-lg flex items-center gap-2 relative">
           <span className="absolute -top-1 -right-1 flex h-2 w-2">
@@ -90,7 +74,7 @@ export const HeaderWidgets: React.FC = () => {
           <span className="text-[9px] font-black uppercase tracking-[0.2em]">LIVE</span>
         </div>
         
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-[20px] flex items-center">
           {news.length > 0 ? (
             <div className="flex gap-12 animate-marquee whitespace-nowrap items-center">
               {news.map((item, i) => (
@@ -104,20 +88,9 @@ export const HeaderWidgets: React.FC = () => {
                   <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
                 </div>
               ))}
-              {news.map((item, i) => (
-                <div 
-                  key={`dup-${i}`} 
-                  onClick={() => handleNewsClick(item.headline)}
-                  className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
-                >
-                  <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
-                  <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
-                  <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
-                </div>
-              ))}
             </div>
           ) : (
-            <div className="text-xs font-black text-slate-500 uppercase tracking-widest animate-pulse">
+            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">
               Carregando feed de notícias...
             </div>
           )}
@@ -130,7 +103,7 @@ export const HeaderWidgets: React.FC = () => {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 35s linear infinite;
+          animation: marquee 40s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;

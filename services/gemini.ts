@@ -4,20 +4,23 @@ import { Transaction, Reminder } from "../types";
 
 const STATIC_NEWS_FALLBACK = [
   { topic: "MODO OFFLINE", headline: "Bem-vindo ao Sem Neura! Configure sua API_KEY para notícias em tempo real." },
-  { topic: "ECONOMIA", headline: "Mercado prevê estabilidade na taxa Selic para o próximo trimestre." },
-  { topic: "TECNOLOGIA", headline: "Brasil se torna hub de desenvolvimento para startups de Inteligência Artificial." },
-  { topic: "JF", headline: "Juiz de Fora registra crescimento de 15% em novos negócios digitais." },
-  { topic: "FINANÇAS", headline: "Uso de apps de gestão cresce 40% entre brasileiros que buscam sair do vermelho." },
-  { topic: "GOOGLE", headline: "Google anuncia integração profunda de IA em ferramentas de produtividade." },
-  { topic: "MERCADO", headline: "Criptoativos registram alta após novas regulamentações favoráveis." },
-  { topic: "BRASIL", headline: "Investimentos em energia limpa batem recorde no primeiro semestre." },
   { topic: "DICA", headline: "Organizar gastos fixos é o primeiro passo para a liberdade financeira." },
+  { topic: "ECONOMIA", headline: "Mercado prevê estabilidade na taxa Selic para o próximo trimestre." },
+  { topic: "JF", headline: "Juiz de Fora registra crescimento de 15% em novos negócios digitais." },
+  { topic: "TECNOLOGIA", headline: "Brasil se torna hub de desenvolvimento para startups de Inteligência Artificial." },
+  { topic: "FINANÇAS", headline: "Uso de apps de gestão cresce 40% entre brasileiros que buscam sair do vermelho." },
   { topic: "IA", headline: "Como pequenos empreendedores estão usando IA para dobrar produtividade." }
 ];
 
 const getApiKey = () => {
-  // Tenta pegar de várias fontes possíveis em ambientes de deploy
-  return process.env.API_KEY || (window as any).process?.env?.API_KEY || "";
+  // Verificação robusta para diferentes ambientes de deploy
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {}
+  
+  return (window as any).API_KEY || (window as any).process?.env?.API_KEY || "";
 };
 
 export const getFinancialHealthAnalysis = async (
@@ -26,7 +29,7 @@ export const getFinancialHealthAnalysis = async (
   isCloudSynced: boolean = false
 ) => {
   const apiKey = getApiKey();
-  if (!apiKey) return "Modo Offline: Configure sua chave Gemini nas configurações para análises inteligentes.";
+  if (!apiKey || apiKey.length < 10) return "Modo Offline: Configure sua chave Gemini no painel do Vercel para análises inteligentes.";
 
   const ai = new GoogleGenAI({ apiKey });
   
@@ -46,15 +49,14 @@ export const getFinancialHealthAnalysis = async (
     });
     return response.text;
   } catch (error) {
-    return "Não foi possível analisar seus dados agora. Foque na organização!";
+    return "Foque na organização! Seus dados estão salvos localmente.";
   }
 };
 
 export const getDynamicNewsFeed = async () => {
   const apiKey = getApiKey();
   
-  // Se não tem chave, nem tenta a API para não travar o carregamento
-  if (!apiKey || apiKey === "") {
+  if (!apiKey || apiKey.length < 10) {
     return [...STATIC_NEWS_FALLBACK].sort(() => Math.random() - 0.5);
   }
 
@@ -63,9 +65,9 @@ export const getDynamicNewsFeed = async () => {
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: "Gere 8 manchetes curtas e impactantes para um feed de notícias. Tópicos: Juiz de Fora (MG), Economia Brasileira, Avanços de IA, e Tecnologia. Retorne em PT-BR.",
+      contents: "Gere 8 manchetes curtas sobre Juiz de Fora, Economia e IA. Retorne em JSON.",
       config: {
-        systemInstruction: "Você é um editor de notícias. Retorne as manchetes em um array JSON.",
+        systemInstruction: "Retorne um array de objetos {topic, headline}.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -82,23 +84,21 @@ export const getDynamicNewsFeed = async () => {
     });
     return JSON.parse(response.text || "[]");
   } catch (error) {
-    console.error("Gemini News Error:", error);
     return [...STATIC_NEWS_FALLBACK].sort(() => Math.random() - 0.5);
   }
 };
 
 export const processNaturalLanguageReminder = async (input: string) => {
   const apiKey = getApiKey();
-  if (!apiKey) return { text: input, priority: "MEDIUM" as const };
+  if (!apiKey || apiKey.length < 10) return { text: input, priority: "MEDIUM" as const };
 
   const ai = new GoogleGenAI({ apiKey });
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Transforme esta frase em um lembrete estruturado: "${input}"`,
+      contents: `Transforme em lembrete: "${input}"`,
       config: {
-        systemInstruction: "Extraia a tarefa e prioridade (HIGH, MEDIUM, LOW).",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
