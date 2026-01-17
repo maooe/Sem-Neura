@@ -9,7 +9,6 @@ import { CategorySpendingChart } from './components/CategorySpendingChart.tsx';
 import { FixedExpensesChart } from './components/FixedExpensesChart.tsx';
 import { SettingsView } from './components/SettingsView.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
-import { ShareModal } from './components/ShareModal.tsx';
 import { ProfileModal } from './components/ProfileModal.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
 import { HeaderWidgets } from './components/HeaderWidgets.tsx';
@@ -23,7 +22,7 @@ import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
 import { auth, saveUserData, loadUserData } from './services/firebase.ts';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users, Palette, CheckCircle, BarChart3 } from 'lucide-react';
+import { BrainCircuit, Menu, X, LayoutDashboard, Calendar, Download, CheckCircle } from 'lucide-react';
 
 const THEMES: Record<ThemeType, any> = {
   classic: { 600: '#2563eb', 500: '#3b82f6', 100: '#dbeafe', 50: '#eff6ff', 900: '#1e3a8a', shadow: 'rgba(37, 99, 235, 0.15)' },
@@ -49,7 +48,6 @@ const App: React.FC = () => {
   const [scriptUrl, setScriptUrl] = useState<string>('');
   const [analysis, setAnalysis] = useState<string>('Carregando sua análise diária...');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [view, setView] = useState<ViewType>('dashboard');
 
@@ -328,7 +326,7 @@ const App: React.FC = () => {
               onViewChange={(v) => setView(v as ViewType)} 
               onExport={() => exportTransactionsToCSV(transactions)} 
               onImportTransactions={handleImportTransactions} 
-              onShare={() => setIsShareModalOpen(true)} 
+              onShare={() => {}} // Função removida da sidebar para ser usada apenas nas settings
               onOpenProfiles={() => setIsProfileModalOpen(true)} 
               isSyncActive={!!scriptUrl || !!user} 
               currentProfile={currentProfile} 

@@ -47,13 +47,14 @@ export const HeaderWidgets: React.FC = () => {
   return (
     <div className="w-full bg-white border-b border-slate-100 px-4 md:px-6 py-3 flex flex-col md:flex-row items-center gap-4 lg:gap-8 overflow-hidden sticky top-0 z-[40] backdrop-blur-md bg-white/80">
       
-      {/* Versão e Refresh */}
+      {/* Botão de Versão Evolutivo (v02/2026) - Age como F5 */}
       <button 
         onClick={handleRefresh}
-        className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-brand-600 transition-all active:scale-95 group shadow-lg"
+        title="Versão v02/2026 - Clique para atualizar"
+        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-brand-600 transition-all active:scale-95 group shadow-lg border border-white/20 shrink-0"
       >
-        <RefreshCcw size={12} className="group-hover:rotate-180 transition-transform duration-500" />
-        <span className="text-[10px] font-black tracking-widest uppercase">v01/2026</span>
+        <RefreshCcw size={14} className="group-hover:rotate-180 transition-transform duration-700 text-brand-400" />
+        <span className="text-[11px] font-black tracking-[0.2em] uppercase">v02/2026</span>
       </button>
 
       <div className="flex items-center gap-4 bg-slate-100/50 px-4 py-2 rounded-2xl border border-slate-200/50">
