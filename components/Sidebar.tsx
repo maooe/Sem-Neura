@@ -1,13 +1,15 @@
 
 import React, { useRef } from 'react';
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check, FileJson, UploadCloud, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Download, Settings, BrainCircuit, Share2, ChevronDown, Palette, Check, FileJson, UploadCloud, FileSpreadsheet, LogIn, LogOut, User as UserIcon, Thermometer } from 'lucide-react';
 import { ThemeType, Transaction } from '../types';
 import { exportFullBackupJSON, importFullBackupJSON } from '../utils/backup';
 import { importTransactionsFromCSV } from '../utils/export';
+import { loginWithGoogle, logout } from '../services/firebase';
+import { User } from 'firebase/auth';
 
 interface SidebarProps {
-  activeView: 'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings';
-  onViewChange: (view: 'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings') => void;
+  activeView: 'dashboard' | 'annual' | 'analysis' | 'pagar' | 'receber' | 'settings';
+  onViewChange: (view: 'dashboard' | 'annual' | 'analysis' | 'pagar' | 'receber' | 'settings') => void;
   onExport: () => void;
   onShare: () => void;
   onOpenProfiles: () => void;
@@ -16,6 +18,7 @@ interface SidebarProps {
   currentProfile: string;
   currentTheme: ThemeType;
   onThemeChange: (theme: ThemeType) => void;
+  currentUser: User | null;
 }
 
 const THEME_OPTIONS: { id: ThemeType; color: string; label: string }[] = [
@@ -36,13 +39,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isSyncActive, 
   currentProfile,
   currentTheme,
-  onThemeChange
+  onThemeChange,
+  currentUser
 }) => {
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'analysis', label: 'Análise Financeira', icon: Thermometer },
     { id: 'annual', label: 'Calendário Anual', icon: Calendar },
     { id: 'pagar', label: 'Contas a Pagar', icon: CreditCard },
     { id: 'receber', label: 'Contas a Receber', icon: TrendingUp },
@@ -78,7 +83,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         console.error(err);
       }
     }
-    // Limpa o input para permitir subir o mesmo arquivo novamente
     if (csvFileInputRef.current) csvFileInputRef.current.value = '';
   };
 
@@ -91,7 +95,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <span className="text-xl font-black text-white tracking-tighter uppercase">Sem Neura</span>
       </div>
 
-      <div className="px-6 mb-8">
+      <div className="px-6 mb-8 space-y-4">
+        {/* Firebase Login Section */}
+        {!currentUser ? (
+          <button 
+            onClick={() => loginWithGoogle()}
+            className="w-full flex items-center gap-3 p-3 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl transition-all shadow-brand font-black text-xs uppercase"
+          >
+            <LogIn size={18} />
+            Entrar com Google
+          </button>
+        ) : (
+          <div className="p-3 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between group">
+             <div className="flex items-center gap-3 overflow-hidden">
+                {currentUser.photoURL ? (
+                  <img src={currentUser.photoURL} className="w-8 h-8 rounded-full border border-white/20" alt="Avatar" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white"><UserIcon size={14}/></div>
+                )}
+                <div className="text-left overflow-hidden">
+                  <p className="text-[10px] font-black text-slate-500 uppercase leading-none mb-1">Logado como</p>
+                  <p className="text-xs font-bold text-white truncate">{currentUser.displayName?.split(' ')[0]}</p>
+                </div>
+             </div>
+             <button onClick={() => logout()} className="text-slate-500 hover:text-rose-500 transition-colors">
+                <LogOut size={14} />
+             </button>
+          </div>
+        )}
+
         <button 
           onClick={onOpenProfiles}
           className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all group"
@@ -101,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {currentProfile.charAt(0)}
             </div>
             <div className="text-left overflow-hidden">
-              <p className="text-[10px] font-black text-slate-500 uppercase leading-none mb-1">Perfil Ativo</p>
+              <p className="text-[10px] font-black text-slate-500 uppercase leading-none mb-1">Perfil Local</p>
               <p className="text-sm font-bold text-white truncate">{currentProfile}</p>
             </div>
           </div>
@@ -203,11 +235,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         <div className={`p-4 rounded-2xl border transition-colors ${isSyncActive ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
-          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Cloud Sync</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Sync Ativo</p>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isSyncActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></div>
             <span className={`text-[11px] font-black uppercase ${isSyncActive ? 'text-emerald-400' : 'text-slate-500'}`}>
-              {isSyncActive ? 'Ativo' : 'Apenas Local'}
+              {isSyncActive ? 'Nuvem Conectada' : 'Apenas Local'}
             </span>
           </div>
         </div>

@@ -13,10 +13,16 @@ import { ShareModal } from './components/ShareModal.tsx';
 import { ProfileModal } from './components/ProfileModal.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
 import { HeaderWidgets } from './components/HeaderWidgets.tsx';
+import { FinancialSummary } from './components/FinancialSummary.tsx';
+import { AccountHistory } from './components/AccountHistory.tsx';
+import { MonthlyPerformanceGrid } from './components/MonthlyPerformanceGrid.tsx';
+import { InsightsBanner } from './components/InsightsBanner.tsx';
 import { getFinancialHealthAnalysis } from './services/gemini.ts';
 import { syncTransactionWithSheets } from './services/googleSheets.ts';
 import { exportTransactionsToCSV } from './utils/export.ts';
-import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users, Palette, CheckCircle } from 'lucide-react';
+import { auth, saveUserData, loadUserData } from './services/firebase.ts';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { BrainCircuit, Menu, X, Cloud, LayoutDashboard, Calendar, Download, Settings, Share2, Users, Palette, CheckCircle, BarChart3 } from 'lucide-react';
 
 const THEMES: Record<ThemeType, any> = {
   classic: { 600: '#2563eb', 500: '#3b82f6', 100: '#dbeafe', 50: '#eff6ff', 900: '#1e3a8a', shadow: 'rgba(37, 99, 235, 0.15)' },
@@ -26,8 +32,11 @@ const THEMES: Record<ThemeType, any> = {
   midnight: { 600: '#334155', 500: '#475569', 100: '#f1f5f9', 50: '#f8fafc', 900: '#0f172a', shadow: 'rgba(51, 65, 85, 0.15)' }
 };
 
+type ViewType = 'dashboard' | 'annual' | 'analysis' | 'pagar' | 'receber' | 'settings';
+
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const [profiles, setProfiles] = useState<string[]>(['Padrão']);
   const [currentProfile, setCurrentProfile] = useState<string>('Padrão');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -35,12 +44,13 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
   const [scriptUrl, setScriptUrl] = useState<string>('');
   const [analysis, setAnalysis] = useState<string>('Carregando sua análise diária...');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'annual' | 'pagar' | 'receber' | 'settings'>('dashboard');
+  const [view, setView] = useState<ViewType>('dashboard');
 
   const currentYear = useMemo(() => new Date().getFullYear(), []);
 
@@ -50,18 +60,33 @@ const App: React.FC = () => {
     TRANSACTIONS: `sn_${currentProfile}_transactions_v3`,
     REMINDERS: `sn_${currentProfile}_reminders_v3`,
     BIRTHDAYS: `sn_${currentProfile}_birthdays_v1`,
+    BUDGETS: `sn_${currentProfile}_category_budgets_v1`,
     SCRIPT_URL: `sn_${currentProfile}_script_url`,
     THEME: `sn_${currentProfile}_theme`,
     LAST_ANALYSIS: `sn_${currentProfile}_last_analysis_date`
   }), [currentProfile]);
 
-  // Splash Screen Timer
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 3000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Aplicar cores do tema
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        const cloudData = await loadUserData(firebaseUser.uid);
+        if (cloudData) {
+          if (cloudData.transactions) setTransactions(cloudData.transactions);
+          if (cloudData.reminders) setReminders(cloudData.reminders);
+          if (cloudData.birthdays) setBirthdays(cloudData.birthdays);
+          if (cloudData.categoryBudgets) setCategoryBudgets(cloudData.categoryBudgets);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const colors = THEMES[theme];
     const root = document.documentElement;
@@ -73,11 +98,12 @@ const App: React.FC = () => {
     root.style.setProperty('--brand-shadow', colors.shadow);
   }, [theme]);
 
-  // Carregar dados e disparar análise automática
   useEffect(() => {
+    if (user) return;
     const savedTrans = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
     const savedRemind = localStorage.getItem(STORAGE_KEYS.REMINDERS);
     const savedBirth = localStorage.getItem(STORAGE_KEYS.BIRTHDAYS);
+    const savedBudgets = localStorage.getItem(STORAGE_KEYS.BUDGETS);
     const savedUrl = localStorage.getItem(STORAGE_KEYS.SCRIPT_URL);
     const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) as ThemeType;
     const lastDate = localStorage.getItem(STORAGE_KEYS.LAST_ANALYSIS);
@@ -88,6 +114,7 @@ const App: React.FC = () => {
     setTransactions(transData);
     setReminders(remindData);
     setBirthdays(savedBirth ? JSON.parse(savedBirth) : []);
+    setCategoryBudgets(savedBudgets ? JSON.parse(savedBudgets) : {});
     setScriptUrl(savedUrl || '');
     if (savedTheme && THEMES[savedTheme]) setTheme(savedTheme);
 
@@ -97,25 +124,33 @@ const App: React.FC = () => {
     } else {
       setAnalysis('Sua análise está atualizada para hoje. Tudo sob controle!');
     }
-  }, [currentProfile, STORAGE_KEYS]);
+  }, [currentProfile, STORAGE_KEYS, user]);
 
-  // Efeito de Salvamento Automático
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
     localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
     localStorage.setItem(STORAGE_KEYS.BIRTHDAYS, JSON.stringify(birthdays));
+    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(categoryBudgets));
     localStorage.setItem(STORAGE_KEYS.SCRIPT_URL, scriptUrl);
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
-  }, [transactions, reminders, birthdays, scriptUrl, theme, STORAGE_KEYS]);
+
+    if (user) {
+      saveUserData(user.uid, { transactions, reminders, birthdays, categoryBudgets });
+    }
+  }, [transactions, reminders, birthdays, categoryBudgets, scriptUrl, theme, STORAGE_KEYS, user]);
 
   const triggerAnalysis = useCallback(async () => {
     setLoadingAnalysis(true);
-    const result = await getFinancialHealthAnalysis(transactions, reminders, !!scriptUrl);
+    const result = await getFinancialHealthAnalysis(transactions, reminders, !!scriptUrl || !!user);
     setAnalysis(result || "Análise concluída.");
     setLoadingAnalysis(false);
     const today = new Date().toISOString().split('T')[0];
     localStorage.setItem(STORAGE_KEYS.LAST_ANALYSIS, today);
-  }, [transactions, reminders, scriptUrl, STORAGE_KEYS]);
+  }, [transactions, reminders, scriptUrl, user, STORAGE_KEYS]);
+
+  const handleUpdateBudget = (categoryName: string, amount: number) => {
+    setCategoryBudgets(prev => ({ ...prev, [categoryName]: amount }));
+  };
 
   const handleAddBirthday = (name: string, date: string) => {
     const newBirth: Birthday = { id: Math.random().toString(36).substr(2, 9), name, date };
@@ -128,7 +163,6 @@ const App: React.FC = () => {
 
   const handleImportTransactions = (imported: Transaction[]) => {
     setTransactions(prev => {
-      // Mesclar dados: substitui se o ID for igual, senão adiciona
       const mergedMap = new Map<string, Transaction>();
       prev.forEach(t => mergedMap.set(t.id, t));
       imported.forEach(t => mergedMap.set(t.id, t));
@@ -176,9 +210,32 @@ const App: React.FC = () => {
         return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} currentTheme={theme} onThemeChange={setTheme} onNavigateToDashboard={() => setView('dashboard')} />;
       case 'annual':
         return <AnnualCalendar2026 birthdays={birthdays} />;
+      case 'analysis':
+        return (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+             <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div>
+                   <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter uppercase">Relatório de <span className="text-brand-600">Performance</span></h1>
+                   <p className="text-slate-500 font-bold text-sm mt-1">Cruzamento de dados e histórico de calor do caixa</p>
+                </div>
+                <button onClick={() => setView('dashboard')} className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase hover:border-brand-500 transition-all shadow-sm">
+                   <LayoutDashboard size={18} /> Voltar ao Painel
+                </button>
+             </header>
+
+             <MonthlyPerformanceGrid transactions={transactions} />
+             <FinancialSummary transactions={transactions} />
+             
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <AccountHistory transactions={transactions} />
+                <CategorySpendingChart transactions={transactions} budgets={categoryBudgets} onUpdateBudget={handleUpdateBudget} />
+             </div>
+          </div>
+        );
       default:
         return (
           <>
+            <InsightsBanner />
             <div className="mb-10 flex flex-col lg:flex-row gap-8 items-start animate-in fade-in slide-in-from-top-6 duration-700">
               <div className="flex-1 w-full">
                   <div className="flex items-center gap-3 mb-2">
@@ -218,16 +275,16 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
               <div className="xl:col-span-2 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <FinanceCard title="CONTAS A PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
-                  <FinanceCard title="CONTAS A RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl} />
+                  <FinanceCard title="CONTAS A PAGAR" type={TransactionType.PAYABLE} items={transactions.filter(t => t.type === TransactionType.PAYABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl || !!user} />
+                  <FinanceCard title="CONTAS A RECEBER" type={TransactionType.RECEIVABLE} items={transactions.filter(t => t.type === TransactionType.RECEIVABLE)} onAdd={handleAddTransaction} onToggleStatus={handleToggleTransStatus} onDelete={handleDeleteTrans} isSyncActive={!!scriptUrl || !!user} />
                 </div>
-                {/* Novo Gráfico Horizontal de Despesas Fixas */}
+                
                 <FixedExpensesChart transactions={transactions} />
                 <GoogleCalendarIntegration transactions={transactions} birthdays={birthdays} onAddBirthday={handleAddBirthday} onDeleteBirthday={handleDeleteBirthday} />
               </div>
               <div className="space-y-8 flex flex-col">
                 <ReminderSection reminders={reminders} onAdd={handleAddReminder} onToggle={handleToggleReminder} onUpdate={handleUpdateReminder} onDelete={handleDeleteReminder} />
-                <CategorySpendingChart transactions={transactions} />
+                <CategorySpendingChart transactions={transactions} budgets={categoryBudgets} onUpdateBudget={handleUpdateBudget} />
               </div>
             </div>
           </>
@@ -243,7 +300,19 @@ const App: React.FC = () => {
         <>
           <HeaderWidgets />
           <div className="flex-1 flex">
-            <Sidebar activeView={view} onViewChange={setView} onExport={() => exportTransactionsToCSV(transactions)} onImportTransactions={handleImportTransactions} onShare={() => setIsShareModalOpen(true)} onOpenProfiles={() => setIsProfileModalOpen(true)} isSyncActive={!!scriptUrl} currentProfile={currentProfile} currentTheme={theme} onThemeChange={setTheme} />
+            <Sidebar 
+              activeView={view} 
+              onViewChange={(v) => setView(v as ViewType)} 
+              onExport={() => exportTransactionsToCSV(transactions)} 
+              onImportTransactions={handleImportTransactions} 
+              onShare={() => setIsShareModalOpen(true)} 
+              onOpenProfiles={() => setIsProfileModalOpen(true)} 
+              isSyncActive={!!scriptUrl || !!user} 
+              currentProfile={currentProfile} 
+              currentTheme={theme} 
+              onThemeChange={setTheme} 
+              currentUser={user}
+            />
             <div className="flex-1 flex flex-col min-w-0">
               <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 lg:hidden">
                 <div className="px-4 h-16 flex items-center justify-between">
@@ -257,7 +326,7 @@ const App: React.FC = () => {
         </>
       )}
 
-      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} transactions={transactions} isSyncActive={!!scriptUrl} />
+      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} transactions={transactions} isSyncActive={!!scriptUrl || !!user} />
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} profiles={profiles} currentProfile={currentProfile} onSelectProfile={setCurrentProfile} onCreateProfile={(name) => { setProfiles([...profiles, name]); setCurrentProfile(name); setIsProfileModalOpen(false); }} onDeleteProfile={(name) => { setProfiles(profiles.filter(p => p !== name)); if(currentProfile === name) setCurrentProfile('Padrão'); }} />
     </div>
   );
