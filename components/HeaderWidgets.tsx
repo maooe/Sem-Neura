@@ -1,29 +1,34 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, Newspaper, Zap, ExternalLink, Radio } from 'lucide-react';
-import { getDynamicNewsFeed } from '../services/gemini';
+import { getDynamicNewsFeed, STATIC_NEWS_FALLBACK } from '../services/gemini';
 
 export const HeaderWidgets: React.FC = () => {
   const [time, setTime] = useState(new Date());
   const [location, setLocation] = useState<string>('Juiz de Fora, MG');
-  const [news, setNews] = useState<{topic: string, headline: string}[]>([]);
+  // Inicializamos com o fallback para nunca ficar vazio
+  const [news, setNews] = useState<{topic: string, headline: string}[]>(STATIC_NEWS_FALLBACK);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(() => setLocation('Juiz de Fora, MG'), () => setLocation('Brasil'));
+      navigator.geolocation.getCurrentPosition(
+        () => setLocation('Juiz de Fora, MG'), 
+        () => setLocation('Brasil'),
+        { timeout: 5000 }
+      );
     }
 
     const fetchNews = async () => {
-      // Começamos tentando buscar as notícias. 
-      // Se a gemini.ts não encontrar API_KEY, ela já retorna o fallback instantaneamente.
       try {
+        // Tenta buscar notícias frescas da IA em background
         const data = await getDynamicNewsFeed();
-        setNews(data);
+        if (data && data.length > 0) {
+          setNews(data);
+        }
       } catch (e) {
-        const fallback = await getDynamicNewsFeed(); 
-        setNews(fallback);
+        console.warn("Mantendo notícias de fallback.");
       }
     };
     
@@ -75,25 +80,31 @@ export const HeaderWidgets: React.FC = () => {
         </div>
         
         <div className="flex-1 overflow-hidden min-h-[20px] flex items-center">
-          {news.length > 0 ? (
-            <div className="flex gap-12 animate-marquee whitespace-nowrap items-center">
-              {news.map((item, i) => (
-                <div 
-                  key={i} 
-                  onClick={() => handleNewsClick(item.headline)}
-                  className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
-                >
-                  <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
-                  <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
-                  <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">
-              Carregando feed de notícias...
-            </div>
-          )}
+          <div className="flex gap-12 animate-marquee whitespace-nowrap items-center">
+            {news.map((item, i) => (
+              <div 
+                key={i} 
+                onClick={() => handleNewsClick(item.headline)}
+                className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
+              >
+                <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
+                <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
+                <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
+              </div>
+            ))}
+            {/* Duplicata para o loop do marquee */}
+            {news.map((item, i) => (
+              <div 
+                key={`dup-${i}`} 
+                onClick={() => handleNewsClick(item.headline)}
+                className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
+              >
+                <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
+                <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
+                <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -103,7 +114,7 @@ export const HeaderWidgets: React.FC = () => {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 40s linear infinite;
+          animation: marquee 50s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;

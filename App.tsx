@@ -210,7 +210,7 @@ const App: React.FC = () => {
       case 'settings':
         return <SettingsView scriptUrl={scriptUrl} onUrlChange={setScriptUrl} currentTheme={theme} onThemeChange={setTheme} onNavigateToDashboard={() => setView('dashboard')} />;
       case 'annual':
-        return <AnnualCalendar2026 birthdays={birthdays} />;
+        return <AnnualCalendar2026 birthdays={birthdays} transactions={transactions} reminders={reminders} />;
       case 'pagar':
         return (
           <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">

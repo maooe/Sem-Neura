@@ -1,10 +1,12 @@
 
 import React from 'react';
-import { Calendar as CalendarIcon, Info, Cake } from 'lucide-react';
-import { Birthday } from '../types';
+import { Calendar as CalendarIcon, Info, Cake, TrendingDown, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Birthday, Transaction, TransactionType, Reminder } from '../types';
 
 interface AnnualCalendar2026Props {
   birthdays?: Birthday[];
+  transactions?: Transaction[];
+  reminders?: Reminder[];
 }
 
 // Feriados Nacionais Brasil 2026
@@ -24,7 +26,11 @@ const HOLIDAYS_2026: Record<string, string> = {
   '2026-12-25': 'Natal',
 };
 
-export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthdays = [] }) => {
+export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ 
+  birthdays = [], 
+  transactions = [], 
+  reminders = [] 
+}) => {
   const months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -42,8 +48,8 @@ export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthday
 
     return (
       <div key={monthIdx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-        <h4 className="font-bold text-slate-800 mb-3 text-center border-b border-slate-50 pb-2">{months[monthIdx]}</h4>
-        <div className="grid grid-cols-7 gap-1 text-[9px] text-center mb-1">
+        <h4 className="font-bold text-slate-800 mb-3 text-center border-b border-slate-50 pb-2 uppercase tracking-tighter text-xs">{months[monthIdx]}</h4>
+        <div className="grid grid-cols-7 gap-1 text-[8px] text-center mb-1">
           {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
             <span key={i} className={`font-black ${i === 0 || i === 6 ? 'text-rose-400' : 'text-slate-400'}`}>{d}</span>
           ))}
@@ -55,21 +61,21 @@ export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthday
           {monthDays.map(day => {
             const dateSuffix = `${(monthIdx + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
             const dateKey = `${year}-${dateSuffix}`;
+            
             const holidayName = HOLIDAYS_2026[dateKey];
             const dayBirths = birthdays.filter(b => b.date.endsWith(dateSuffix));
+            const dayTrans = transactions.filter(t => t.dueDate === dateKey);
+            
             const dayOfWeek = (day + startDay - 1) % 7;
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-            const tooltipText = [
-              holidayName ? `Feriado: ${holidayName}` : '',
-              dayBirths.length > 0 ? `Niver: ${dayBirths.map(b => b.name).join(', ')}` : ''
-            ].filter(Boolean).join(' | ');
+            const hasPayable = dayTrans.some(t => t.type === TransactionType.PAYABLE);
+            const hasReceivable = dayTrans.some(t => t.type === TransactionType.RECEIVABLE);
 
             return (
               <div 
                 key={day} 
-                title={tooltipText}
-                className={`aspect-square flex flex-col items-center justify-center text-[10px] font-bold rounded-lg transition-all relative cursor-default
+                className={`aspect-square flex flex-col items-center justify-center text-[9px] font-bold rounded-lg transition-all relative cursor-pointer group
                   ${holidayName 
                     ? 'bg-rose-500 text-white shadow-sm ring-1 ring-rose-300' 
                     : isWeekend 
@@ -79,11 +85,30 @@ export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthday
                 `}
               >
                 {day}
-                {holidayName && (
-                   <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-white rounded-full border border-rose-500"></div>
-                )}
-                {dayBirths.length > 0 && (
-                   <div className={`absolute -bottom-1 -left-1 w-1.5 h-1.5 rounded-full border border-white ${holidayName ? 'bg-amber-400' : 'bg-amber-600'}`}></div>
+                
+                {/* Indicadores Visuais de Transações */}
+                <div className="absolute -bottom-1 flex gap-0.5">
+                   {hasPayable && <div className={`w-1 h-1 rounded-full ${holidayName ? 'bg-white' : 'bg-rose-500 animate-pulse'}`} />}
+                   {hasReceivable && <div className={`w-1 h-1 rounded-full ${holidayName ? 'bg-white' : 'bg-emerald-500 animate-pulse'}`} />}
+                </div>
+
+                {/* Tooltip Detalhado */}
+                {(holidayName || dayBirths.length > 0 || dayTrans.length > 0) && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 hidden group-hover:block bg-slate-900 text-white text-[9px] p-3 rounded-xl shadow-2xl z-[100] pointer-events-none border border-white/10 animate-in fade-in slide-in-from-bottom-2">
+                    {holidayName && <p className="font-bold text-rose-400 mb-1.5 flex items-center gap-1">🚩 {holidayName}</p>}
+                    {dayBirths.map(b => <p key={b.id} className="text-amber-400 font-bold mb-1.5 flex items-center gap-1">🎂 Niver: {b.name}</p>)}
+                    {dayTrans.map(t => (
+                      <div key={t.id} className="flex items-center justify-between gap-2 mb-1 border-b border-white/10 pb-1 last:border-0 last:mb-0">
+                        <div className="flex items-center gap-1 truncate">
+                          <span className={t.type === TransactionType.PAYABLE ? 'text-rose-400' : 'text-emerald-400'}>
+                            {t.type === TransactionType.PAYABLE ? <TrendingDown size={10}/> : <TrendingUp size={10}/>}
+                          </span>
+                          <span className="truncate">{t.description}</span>
+                        </div>
+                        <span className="font-black whitespace-nowrap">R$ {t.amount.toLocaleString('pt-BR')}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             );
@@ -101,8 +126,8 @@ export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthday
             <CalendarIcon size={28} />
           </div>
           <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1">CALENDÁRIO ANUAL</h2>
-            <p className="text-slate-500 text-sm font-medium">Visualização completa de 2026 integrada</p>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1">MAPA ANUAL DE FLUXO</h2>
+            <p className="text-slate-500 text-sm font-medium">Visualização completa de vencimentos e eventos em 2026</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-xl tracking-widest shadow-xl">
@@ -116,35 +141,41 @@ export const AnnualCalendar2026: React.FC<AnnualCalendar2026Props> = ({ birthday
       
       <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
         <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Info size={14} className="text-brand-500" /> Legenda do Ano
+          <Info size={14} className="text-brand-500" /> Legenda do Mapa de Calor
         </h5>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white text-[10px] font-black shadow-sm ring-2 ring-rose-100">12</div>
+            <div className="w-10 h-10 rounded-xl bg-rose-500 flex flex-col items-center justify-center text-white text-[10px] font-black shadow-sm ring-2 ring-rose-100">
+              15 <div className="w-1 h-1 bg-white rounded-full mt-0.5" />
+            </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-800">Feriados</span>
-              <span className="text-[10px] text-slate-400 font-medium uppercase">Datas Nacionais</span>
+              <span className="text-sm font-bold text-slate-800">Contas a Pagar</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Débitos do Dia</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-[10px] font-black ring-2 ring-amber-400">05</div>
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center text-slate-900 text-[10px] font-black">
+              12 <div className="w-1 h-1 bg-emerald-500 rounded-full mt-0.5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-800">Recebíveis</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Entradas Previstas</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-[10px] font-black ring-2 ring-amber-400">🎂</div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-slate-800">Aniversários</span>
-              <span className="text-[10px] text-slate-400 font-medium uppercase">Datas Especiais</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Datas de Terceiros</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-[10px] font-black border border-slate-200">S/D</div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-800">Finais de Semana</span>
-              <span className="text-[10px] text-slate-400 font-medium uppercase">Folga</span>
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+              <CheckCircle2 size={16} />
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-600 text-[10px] font-black border border-slate-200">15</div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-800">Dias Úteis</span>
-              <span className="text-[10px] text-slate-400 font-medium uppercase">Segunda a Sexta</span>
+              <span className="text-sm font-bold text-slate-800">Sincronizado</span>
+              <span className="text-[10px] text-slate-400 font-medium uppercase">Vercel Cloud OK</span>
             </div>
           </div>
         </div>
