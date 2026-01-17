@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Newspaper, Zap, ExternalLink } from 'lucide-react';
+import { Clock, MapPin, Newspaper, Zap, ExternalLink, Radio } from 'lucide-react';
 import { getDynamicNewsFeed } from '../services/gemini';
 
 export const HeaderWidgets: React.FC = () => {
@@ -18,7 +18,7 @@ export const HeaderWidgets: React.FC = () => {
           // Em um app real, faríamos reverse geocoding aqui
           setLocation('Juiz de Fora, MG');
         } catch (e) { setLocation('Localização Ativa'); }
-      }, () => setLocation('Localização Manual'));
+      }, () => setLocation('Brasil'));
     }
 
     // News
@@ -67,38 +67,49 @@ export const HeaderWidgets: React.FC = () => {
 
       {/* News Ticker */}
       <div className="flex-1 w-full bg-slate-900 text-white rounded-2xl p-2.5 flex items-center gap-4 overflow-hidden shadow-lg shadow-slate-200">
-        <div className="flex-shrink-0 bg-brand-600 px-3 py-1 rounded-lg flex items-center gap-2">
-          <Newspaper size={14} />
-          <span className="text-[9px] font-black uppercase tracking-[0.2em]">News</span>
+        <div className="flex-shrink-0 bg-brand-600 px-3 py-1 rounded-lg flex items-center gap-2 relative">
+          <span className="absolute -top-1 -right-1 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+          </span>
+          <Radio size={12} className="text-white/80" />
+          <span className="text-[9px] font-black uppercase tracking-[0.2em]">LIVE</span>
         </div>
+        
         <div className="flex-1 overflow-hidden">
-          <div className="flex gap-12 animate-marquee whitespace-nowrap items-center">
-            {news.map((item, i) => (
-              <div 
-                key={i} 
-                onClick={() => handleNewsClick(item.headline)}
-                className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
-              >
-                <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
-                <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
-                <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
-                <Zap size={10} className="text-amber-500" />
-              </div>
-            ))}
-            {/* Duplicate for infinite effect */}
-            {news.map((item, i) => (
-              <div 
-                key={`dup-${i}`} 
-                onClick={() => handleNewsClick(item.headline)}
-                className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
-              >
-                <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
-                <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
-                <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
-                <Zap size={10} className="text-amber-500" />
-              </div>
-            ))}
-          </div>
+          {news.length > 0 ? (
+            <div className="flex gap-12 animate-marquee whitespace-nowrap items-center">
+              {news.map((item, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => handleNewsClick(item.headline)}
+                  className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
+                >
+                  <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
+                  <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
+                  <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
+                  <Zap size={10} className="text-amber-500" />
+                </div>
+              ))}
+              {/* Duplicamos para garantir o loop infinito suave */}
+              {news.map((item, i) => (
+                <div 
+                  key={`dup-${i}`} 
+                  onClick={() => handleNewsClick(item.headline)}
+                  className="flex items-center gap-3 cursor-pointer group/news transition-all hover:scale-105"
+                >
+                  <span className="text-[10px] font-black text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded uppercase tracking-widest group-hover/news:bg-brand-400 group-hover/news:text-slate-900 transition-colors">{item.topic}</span>
+                  <span className="text-xs font-bold text-slate-200 group-hover/news:text-white underline-offset-4 group-hover/news:underline decoration-brand-500">{item.headline}</span>
+                  <ExternalLink size={10} className="text-slate-500 group-hover/news:text-brand-500" />
+                  <Zap size={10} className="text-amber-500" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs font-black text-slate-500 uppercase tracking-widest animate-pulse">
+              Carregando feed de notícias...
+            </div>
+          )}
         </div>
       </div>
 
@@ -108,8 +119,7 @@ export const HeaderWidgets: React.FC = () => {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          /* Velocidade aumentada: de 40s para 20s */
-          animation: marquee 20s linear infinite;
+          animation: marquee 30s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
